@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 # @Author: Invalid macro definition.
 # @Date:   2022-03-08 17:42:15
-# @Last Modified by:   Invalid macro definition.
-# @Last Modified time: 2022-03-08 17:42:27
+# @Last Modified by:   Invalid macro definition.
+
+# @Last Modified time: 2022-03-08 17:42:27
+
 
 import numpy as np
+import math
 from scipy.spatial.transform import Rotation as R
 
 def get_3d_corner(df):
@@ -38,12 +41,9 @@ def get_cam_info(df):
 	    'x':df['global_pos_x'],
 	    'y':df['global_pos_y'],
 	    'z':df['global_pos_z'],
-	    'rx':0,
-	    'ry':45,
-	    'rz':0
-	    # 'rx':df['EulerAngle_x'],
-	    # 'ry':df['EulerAngle_y'],
-	    # 'rz':df['EulerAngle_z'],
+	    'rx':df['EulerAngle_x'],
+	    'ry':df['EulerAngle_y'],
+	    'rz':df['EulerAngle_z'],
 	}
 
 	return res
@@ -77,3 +77,73 @@ def convert_to_opencv_coord(data):
 	data[2] = data[2]
 
 	return data
+
+def get_2d_box(data,img_height):
+
+	data=data.values[1:]
+
+	x = []
+	y = []
+
+	for i in range(len(data)):
+		if i%2==0:
+			x.append(data[i])
+		else:
+			y.append(img_height - data[i])
+
+	xmin = int(min(x))
+	xmax = int(max(x))
+
+	ymin = int(min(y))
+	ymax = int(max(y))
+
+	if (xmin <0 and xmax >img_height) or (ymin < 0 and ymax > img_height):
+		return None
+
+	if xmin < 0:
+		xmin = 0
+	if ymin < 0:
+		ymin = 0
+	if xmax > img_height:
+		xmax = img_height
+	if ymax > img_height:
+		ymax = img_height
+	
+	return xmin,ymin,xmax,ymax
+
+def get_middle(pts):
+	res = min(pts) + (max(pts)-min(pts))/2
+	return res
+
+def get_xyz(corner):
+	x = round(get_middle(corner[0]),2)
+	z = round(get_middle(corner[2]),2)
+	y = round(get_middle(corner[1]),2)
+
+	return (x,y,z)
+
+def get_whl(corner):
+	pts = [x for x in zip(corner[0],corner[1],corner[2])]
+	w,h,l = round(calculate_distance(pts[0],pts[1]),2),round(calculate_distance(pts[0],pts[4]),2),round(calculate_distance(pts[0],pts[2]),2)
+	return (w,h,l)
+
+def calculate_distance(pts_0,pts_1):
+	x1,y1,z1 = pts_0
+	x2,y2,z2 = pts_1
+	dis = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2)
+
+	return dis
+
+def get_yaw(x,z,cx,cz):
+	dx = (x-cx)
+	dz = (z-cz)
+	
+	if dx!=0:
+		yaw = -math.atan(dz/dx)
+	else:
+		if dz<0:
+			yaw = -np.pi/2
+		else:
+			yaw = np.pi/2
+			
+	return round(yaw,2)
