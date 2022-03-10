@@ -6,6 +6,8 @@
 
 # @Last Modified time: 2022-03-08 17:23:00
 
+import os
+import re
 import cv2
 import pickle
 import json
@@ -19,15 +21,18 @@ import lib.dataset.opencv_utils as utils
 class OpenCV_Dataset(object):
 	def __init__(self):
 		self.data_dir = None
+		self.fm = None
+
 		self.fish_files = []
 
-	def load_from_unity(self,Dataset):
+	def load_from_unity(self,Dataset,folder_manager):
 		print('converting to opencv format')
+		self.fm = folder_manager
 		self.data_dir = Dataset.data_dir
 
 		for unity_file in tqdm(Dataset.unity_files):
 			fish_file = Fish_File()
-			fish_file.load_from_unity(unity_file)
+			fish_file.load_from_unity(unity_file,self.fm)
 			fish_file.convert_to_opencv()
 			self.fish_files.append(fish_file)
 
@@ -42,12 +47,18 @@ class OpenCV_Dataset(object):
 
 		return dataset
 
-	def save_to_pkl(self,path):
-		with open(path, 'wb') as f:
+	def save_to_pkl(self,filename=None):
+		if filename == None:
+			filename=self.fm.data_name+'.pkl'
+
+		with open(os.path.join(self.fm.ann_dir,filename), 'wb') as f:
 			pickle.dump(self, f)
 
-	def save_to_json(self,path):
-		with open(path, 'w') as f:
+	def save_to_json(self,filename=None):
+		if filename == None:
+			filename = self.fm.data_name+'.json'
+
+		with open(os.path.join(self.fm.ann_dir,filename), 'w') as f:
 			json.dump(self.to_dict(), f,ensure_ascii=False, indent=4)
 
 
@@ -55,6 +66,7 @@ class Fish_File(object):
 	def __init__(self):
 		# data --> unity_data
 		self.data = None
+		self.fm = None
 
 		self.filename = None
 		self.cycle = None
@@ -63,33 +75,38 @@ class Fish_File(object):
 
 		self.img_path = None
 		self.fish = []
-		self.corners = []
 
-	def load_from_unity(self,data):
+	def load_from_unity(self,data,fm):
 		self.data = data
-		
-		self.img_path = data.img_path
+		self.fm = fm
+
 		self.filename = data.name 
-		self.cycle = data.cycle
-		self.frame = data.frame
+		self.cycle = int(data.cycle)
+		self.frame = int(data.frame)
 
 		cam_info = utils.get_cam_info(self.data.cam_transform)
 		self.camera.load_from_unity(data,cam_info)
 
+		img_filename = str(self.cycle).zfill(4)+'_'+str(self.frame).zfill(4)+'.jpg'
+		self.img_path = os.path.join(self.fm.img_dir,img_filename)
+
+	def convert_to_opencv(self):
+		self._copy_image()
+		
+		cam_info = utils.get_cam_info(self.data.cam_transform)
+
 		corners = utils.get_3d_corner(self.data.ann_3d)
 		corners = [utils.convert_to_cam_coord(corner,cam_info) for corner in corners] 
 		corners = [utils.convert_to_opencv_coord(corner) for corner in corners]
-		self.corners = corners
 
-	def convert_to_opencv(self):
-		for i in range(len(self.corners)):
+		for i in range(len(corners)):
 
 			ann_2d = self.data.ann_2d.iloc[i]
 			ann_3d = self.data.ann_3d.iloc[i]
-			corner = self.corners[i]
+			corner = corners[i]
 
-			fish = Fish_data()
-			fish.id = ann_2d['id']
+			fish = OpenCV_Object()
+			fish.id = int(re.findall('\d+$',ann_2d['id'])[0])
 
 			h,w,_ = cv2.imread(self.data.img_path).shape
 			bbox = utils.get_2d_box(ann_2d,h)
@@ -114,6 +131,15 @@ class Fish_File(object):
 			file_dict['fish'].append(fish.to_dict())
 
 		return file_dict
+
+	def _image_transform(self,img):
+		img = cv2.resize(img,(1024,1024))
+		return img
+
+	def _copy_image(self):
+		img = cv2.imread(self.data.img_path)
+		img = self._image_transform(img)
+		cv2.imwrite(self.img_path,img)
 
 class OpenCV_Camera(object):
 	def __init__(self):
@@ -147,7 +173,17 @@ class OpenCV_Camera(object):
 
 		h,w,_ = cv2.imread(data.img_path).shape
 		self.set_intrinsic(w,h)
-		self.set_extrinsic_to_identity()	
+		self.set_extrinsic_to_identity()
+		self.set_to_origin()
+
+	def set_to_origin(self):
+		self.x = 0
+		self.y = 0
+		self.z = 0
+
+		self.rx = 0
+		self.ry = 0 
+		self.rz = 0	
 
 	def set_intrinsic(self,img_w,img_h):
 		intrinsic = np.eye(3)
@@ -191,7 +227,7 @@ class OpenCV_Camera(object):
 
 		return cam
 
-class Fish_data(object):
+class OpenCV_Object(object):
 	def __init__(self):
 		# id
 		self.id = None
@@ -215,6 +251,12 @@ class Fish_data(object):
 		# 3d rotation
 		self.ry = None
 		self.alpha = None
+
+	def obj_transform(self):
+		self.xmin = self.xmin*4
+		self.ymin = self.ymin*4
+		self.xmax = self.xmax*4
+		self.ymax = self.ymax*4
 
 	def to_dict(self):
 		fish = {

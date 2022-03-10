@@ -45,25 +45,37 @@ cam_relative = True
 unity_dataset = load_unity_dataset(dataset_dir = DATASET_DIR,data_num = DATA_NUM)
 
 #=============================================CONVERT TO OPENCV=============================================================
-
-opencv_dataset = OpenCV_Dataset()
-opencv_dataset.load_from_unity(unity_dataset)
-
 fm = OpenCV_folder_manager(data_dir=DATASET_DIR,name=DATASET_NAME)
 fm.create_folder()
 
+opencv_dataset = OpenCV_Dataset()
+opencv_dataset.load_from_unity(unity_dataset,fm)
+
 print('saving to OPENCV dataset ....')
-opencv_dataset.save_to_json(os.path.join(fm.ann_dir,DATASET_NAME+'.json'))
-opencv_dataset.save_to_pkl(os.path.join(fm.ann_dir,DATASET_NAME+'.pkl'))
+opencv_dataset.save_to_json()
+opencv_dataset.save_to_pkl()
 
-#=============================================CONVERT TO COCO=============================================================
-coco_dataset = COCO_Dataset()
-coco_dataset.load_from_opencv(opencv_dataset)
-
+#=============================================CONVERT TO COCO Tracking =============================================================
 fm = COCO_folder_manager(data_dir=DATASET_DIR,name=DATASET_NAME)
 fm.create_folder()
 
-print('saving to COCO dataset ....')
-coco_dataset.save_to_json(os.path.join(fm.ann_dir,DATASET_NAME+'.json'))
-coco_dataset.save_to_pkl(os.path.join(fm.ann_dir,DATASET_NAME+'.pkl'))
+coco_dataset = COCO_Dataset()
+coco_dataset.load_from_opencv(opencv_dataset,fm)
+
+print('saving to COCO Tracking dataset ....')
+coco_dataset.save_to_json()
+coco_dataset.save_to_pkl()
+
+
+#=============================================CONVERT TO COCO Detection =============================================================
+fm = COCO_folder_manager(data_dir=DATASET_DIR,name=DATASET_NAME,tag='detection')
+fm.create_folder()
+
+coco_dataset = COCO_Dataset()
+coco_dataset.load_from_opencv(opencv_dataset,fm)
+
+print('saving to COCO Detection dataset ....')
+coco_dataset.save_to_json(tag='detection')
+coco_dataset.save_to_pkl()
+
 print('Dataset Converted Successfully')

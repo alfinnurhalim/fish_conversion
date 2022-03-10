@@ -98,7 +98,7 @@ def get_2d_box(data,img_height):
 	ymax = int(max(y))
 
 	if (xmin <0 and xmax >img_height) or (ymin < 0 and ymax > img_height):
-		return None
+		return 0,0,0,0
 
 	if xmin < 0:
 		xmin = 0
