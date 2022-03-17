@@ -24,7 +24,7 @@ class COCO_Dataset(object):
 	def __init__(self):
 		self.data_dir = None
 		self.coco_files = []
-		self.categories = [{'id':1,'name':'Fish'}]
+		self.categories = [{'id':1,'name':'fish'},{'id':2,'name':'cyclist'},{'id':3,'name':'car'},{'id':4,'name':'truck'},{'id':5,'name':'tram'},{'id':6,'name':'misc'},{'id':7,'name':'dontcare'}]
 
 	def load_from_opencv(self,Dataset,folder_manager):
 		print('converting to COCO format')
@@ -36,7 +36,7 @@ class COCO_Dataset(object):
 			coco_file.load_from_fish_file(fish_file,self.fm)
 			self.coco_files.append(coco_file)
 
-	def to_dict(self,tag='tracking'):
+	def to_dict(self,tag='tracking',output=False):
 		coco = {
 			'categories':self.categories,
 			'images' : [],
@@ -44,10 +44,17 @@ class COCO_Dataset(object):
 			'annotations':[]
 		}
 
+		# Insert Image and annotation
+		index = 0
 		for file in self.coco_files:
 			coco['images'].append(file.to_dict(tag='image'))
 			for coco_obj in file.COCO_objects:
-				coco['annotations'].append(coco_obj.to_dict())
+				coco_obj.id = index
+				index = index + 1
+				coco['annotations'].append(coco_obj.to_dict(output=output))
+
+		# insert Video dict
+		coco['videos'] = self._get_video_dict()
 
 		if tag=='detection':
 			del coco['annotations']
@@ -60,12 +67,32 @@ class COCO_Dataset(object):
 		with open(os.path.join(self.fm.ann_dir,filename), 'wb') as f:
 			pickle.dump(self, f)
 
-	def save_to_json(self,filename=None,tag='tracking'):
+	def save_to_json(self,filename=None,tag='tracking',output=False):
 		if filename == None:
 			filename = self.fm.data_name+'.json'
 
 		with open(os.path.join(self.fm.ann_dir,filename), 'w') as f:
-			json.dump(self.to_dict(tag), f,ensure_ascii=False, indent=2)
+			json.dump(self.to_dict(tag,output=output), f,ensure_ascii=False, indent=2)
+
+	def save_image(self):
+		for file in self.coco_files:
+			file.save_image()
+
+	def _get_video_dict(self):
+		video_dict = []
+
+		cycle_list = set([x.video_id for x in self.coco_files])
+		for cycle in cycle_list:
+			frame_count = sum(x.video_id == cycle for x in self.coco_files)
+			res = {
+				'id':int(cycle),
+				'name':str(int(cycle)).zfill(4),
+				'n_frames':frame_count
+			}
+			video_dict.append(res)
+
+		return video_dict
+
 
 class COCO_File(object):
 	def __init__(self):
@@ -102,13 +129,12 @@ class COCO_File(object):
 		
 		self.first_frame = True if self.index == 0 else False
 
-		self.copy_image()
 		self.convert_to_COCO()
 
 	def convert_to_COCO(self):
 		for i,fish in enumerate(self.data.fish):
 			coco = COCO_Object()
-			coco.load_from_fish_object(index=1,data=fish,coco_file=self)
+			coco.load_from_fish_object(index=i,data=fish,coco_file=self)
 
 			self.COCO_objects.append(coco)
 
@@ -131,11 +157,6 @@ class COCO_File(object):
 			'first_frame':self.first_frame
 		}
 
-		videos = {
-			'id':self.video_id,
-			'name':str(self.video_id).zfill(4),
-			'n_frames':0
-		}
 		annotations = []
 		for coco in self.COCO_objects:
 			annotations.append(coco.to_dict())
@@ -144,8 +165,6 @@ class COCO_File(object):
 			return image
 		elif tag == 'annotations':
 			return annotations
-		elif tag == 'videos':
-			return videos
 		else:
 			return image
 
@@ -153,7 +172,7 @@ class COCO_File(object):
 		img = cv2.resize(img,(1024,1024))
 		return img
 
-	def copy_image(self):
+	def save_image(self):
 		img = cv2.imread(self.data.img_path)
 		img = self._image_transform(img)
 
@@ -170,7 +189,17 @@ class COCO_Camera(object):
 		self.near_clip = 0.15
 
 	def load_from_opencv_camera(self,camera):
-		self.cali = camera.intrinsic.tolist()
+		cam = camera.intrinsic
+
+		# cam[0,2] = 0
+		# cam[1,2] = 0
+
+		self.cali = cam.tolist()
+
+		# convert to 4x3 mattrix
+		self.cali[0].append(0)
+		self.cali[1].append(0)
+		self.cali[2].append(0)
 
 		self.position = [camera.x,camera.y,camera.z]
 		self.rotation = [camera.rx,camera.ry,camera.rz]
@@ -216,7 +245,7 @@ class COCO_Object(object):
 		self.ry = data.ry
 		self.alpha = data.alpha
 
-		self.dimension = [data.w,data.h,data.l]
+		self.dimension = [data.h,data.w,data.l]
 		self.translation = [data.x,data.y,data.z]
 
 		h_2d = abs(int(data.ymax - data.ymin))
@@ -235,29 +264,59 @@ class COCO_Object(object):
 							data.xmax,data.ymax,
 							data.xmax,data.ymin]
 
-	def to_dict(self):
-		fish = {
-			'id' : self.id,
-			'image_id': self.image_id,
-			'category_id':self.category_id,
-			'instance_id':self.instance_id,
+	def to_dict(self,output=False):
 
-			'alpha'	: self.alpha,
-			'roty': self.ry,
+		if output:
+			fish = {
+				'id' : self.id,
+				'image_id': self.image_id,
+				'category_id':self.category_id,
+				'instance_id':self.instance_id,
 
-			'dimension'	: self.dimension,
-			'translation': self.translation,
+				'alpha'	: self.alpha,
+				'roty': self.ry,
 
-			'is_occluded':self.is_occluded,
-			'is_truncated':self.is_truncated,
+				'dimension'	: self.dimension,
+				'translation': self.translation,
 
-			'center_2d'	: self.center_2d,
-			'delta_2d'	: self.delta_2d,
-			'bbox'		: self.bbox,
-			'area'		: self.area,
-			'iscrowd'	: self.iscrowd,
-			'ignore'	: self.ignore,
-			'segmentation': [self.segmentation]
-		}
+				'is_occluded':bool(self.is_occluded),
+				'is_truncated':bool(self.is_truncated),
+
+				'bbox'		: self.bbox,
+				'area'		: self.area,
+				'center_2d'	: self.center_2d,
+				'uncertainty': 0.99,
+
+				'depth'		: [self.translation[-1]],
+				
+				'iscrowd'	: self.iscrowd,
+				'ignore'	: self.ignore,
+				'segmentation': [self.segmentation],
+				'score'		: 0.99
+			}
+		else:
+			fish = {
+				'id' : self.id,
+				'image_id': self.image_id,
+				'category_id':self.category_id,
+				'instance_id':self.instance_id,
+
+				'alpha'	: self.alpha,
+				'roty': self.ry,
+
+				'dimension'	: self.dimension,
+				'translation': self.translation,
+
+				'is_occluded':self.is_occluded,
+				'is_truncated':self.is_truncated,
+
+				'center_2d'	: self.center_2d,
+				'delta_2d'	: self.delta_2d,
+				'bbox'		: self.bbox,
+				'area'		: self.area,
+				'iscrowd'	: self.iscrowd,
+				'ignore'	: self.ignore,
+				'segmentation': [self.segmentation]
+			}
 		return fish
 		

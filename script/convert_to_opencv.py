@@ -18,7 +18,7 @@ from lib.dataset.COCO_Dataset import COCO_Dataset
 
 #=================================================CONFIGURATIONS==============================================================
 # root dir 
-DATASET_DIR = '../synthetic_dataset/yellowtail_9_raw_small'
+DATASET_DIR = "../synthetic_dataset/yellowtail_multi_2/cam3"
 
 DATASET_NAME = os.path.basename(DATASET_DIR)
 

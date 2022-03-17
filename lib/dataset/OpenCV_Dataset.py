@@ -61,6 +61,10 @@ class OpenCV_Dataset(object):
 		with open(os.path.join(self.fm.ann_dir,filename), 'w') as f:
 			json.dump(self.to_dict(), f,ensure_ascii=False, indent=4)
 
+	def save_image(self):
+		for file in self.fish_files:
+			file.save_image()
+
 
 class Fish_File(object):
 	def __init__(self):
@@ -84,14 +88,21 @@ class Fish_File(object):
 		self.cycle = int(data.cycle)
 		self.frame = int(data.frame)
 
+		self._zero_index_error_fix()
+
 		cam_info = utils.get_cam_info(self.data.cam_transform)
 		self.camera.load_from_unity(data,cam_info)
 
 		img_filename = str(self.cycle).zfill(4)+'_'+str(self.frame).zfill(4)+'.jpg'
 		self.img_path = os.path.join(self.fm.img_dir,img_filename)
+		
+
+	def _zero_index_error_fix(self):
+		# somehow cycle 0 frame 0 is always a blank black image, we removed it and make frame 1 index = 0
+		if self.cycle == 0 :
+			self.frame = self.frame - 1
 
 	def convert_to_opencv(self):
-		self._copy_image()
 		
 		cam_info = utils.get_cam_info(self.data.cam_transform)
 
@@ -117,7 +128,12 @@ class Fish_File(object):
 
 			fish.ry = utils.get_yaw(corner[0][0],corner[-1][0],fish.x,fish.z)
 			fish.alpha = utils.get_yaw(fish.x,fish.z,0,0)
+
+			fish.obj_transform()
 			self.fish.append(fish)
+
+		# sort the fish based on id
+		self.fish.sort(key=lambda x: x.id, reverse=False)
 
 	def to_dict(self):
 		file_dict = {'filename' : self.filename,
@@ -136,7 +152,7 @@ class Fish_File(object):
 		img = cv2.resize(img,(1024,1024))
 		return img
 
-	def _copy_image(self):
+	def save_image(self):
 		img = cv2.imread(self.data.img_path)
 		img = self._image_transform(img)
 		cv2.imwrite(self.img_path,img)
@@ -172,7 +188,7 @@ class OpenCV_Camera(object):
 		self.focal_length = 331 #tobe changed later
 
 		h,w,_ = cv2.imread(data.img_path).shape
-		self.set_intrinsic(w,h)
+		self.set_intrinsic(w*4,h*4)
 		self.set_extrinsic_to_identity()
 		self.set_to_origin()
 
@@ -191,8 +207,8 @@ class OpenCV_Camera(object):
 		intrinsic[0,0] = self.focal_length
 		intrinsic[1,1] = self.focal_length
 
-		intrinsic[-1,0] = int(img_w/2)
-		intrinsic[-1,1] = int(img_h/2)
+		intrinsic[0,2] = int(img_w/2)
+		intrinsic[1,2] = int(img_h/2)
 
 		self.intrinsic = intrinsic
 
