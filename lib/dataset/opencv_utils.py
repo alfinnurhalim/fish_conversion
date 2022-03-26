@@ -55,9 +55,9 @@ def convert_to_cam_coord(data,cam_info):
 	data[2] = data[2] - cam_info['z']
 
 	# rotate CCW
-	rx = -cam_info['rx']
+	rx = cam_info['rx']
 	ry = -cam_info['ry']
-	rz = -cam_info['rz']
+	rz = cam_info['rz']
 
 	r = R.from_euler('xyz', [rx, ry, rz], degrees=True).as_matrix()
 
@@ -78,7 +78,7 @@ def convert_to_opencv_coord(data):
 
 	return data
 
-def get_2d_box(data,img_height):
+def get_2d_box(data,h,w):
 
 	data=data.values[1:]
 
@@ -89,7 +89,7 @@ def get_2d_box(data,img_height):
 		if i%2==0:
 			x.append(data[i])
 		else:
-			y.append(img_height - data[i])
+			y.append(h - data[i])
 
 	xmin = int(min(x))
 	xmax = int(max(x))
@@ -97,17 +97,17 @@ def get_2d_box(data,img_height):
 	ymin = int(min(y))
 	ymax = int(max(y))
 
-	if (xmin <0 and xmax >img_height) or (ymin < 0 and ymax > img_height):
-		return 0,0,0,0
+	if (xmin <0 and xmax >w) and (ymin < 0 and ymax > h):
+		return None
 
 	if xmin < 0:
 		xmin = 0
 	if ymin < 0:
 		ymin = 0
-	if xmax > img_height:
-		xmax = img_height
-	if ymax > img_height:
-		ymax = img_height
+	if xmax > w:
+		xmax = w
+	if ymax > h:
+		ymax = h
 	
 	return xmin,ymin,xmax,ymax
 
@@ -145,5 +145,5 @@ def get_yaw(x,z,cx,cz):
 			yaw = -np.pi/2
 		else:
 			yaw = np.pi/2
-			
+	yaw = yaw + np.pi/2
 	return round(yaw,2)

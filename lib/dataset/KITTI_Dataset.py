@@ -59,9 +59,11 @@ class KITTI_Dataset(object):
 			for cycle in self.cycle_list:
 				self.fm.make_dir(os.path.join(self.fm.img_dir,str(cycle).zfill(4)))
 
-		for file in self.kitti_files:
+		for i,file in enumerate(self.kitti_files):
 			if tag	== 'tracking':
 				file.img_path = os.path.join(self.fm.img_dir,str(file.cycle).zfill(4),file.filename+'.jpg')
+			else:
+				file.img_path = os.path.join(self.fm.img_dir,str(i).zfill(6)+'.jpg')
 			file.save_image()
 
 	def save_camera(self,tag='detection'):
@@ -70,8 +72,8 @@ class KITTI_Dataset(object):
 			for cycle in self.cycle_list:
 				file.camera.save_camera(file.fm,str(cycle).zfill(4))
 		else:
-			for file in self.kitti_files:
-				file.camera.save_camera(file.fm,file.filename)
+			for i,file in enumerate(self.kitti_files):
+				file.camera.save_camera(file.fm,str(i).zfill(6))
 
 	def save_ann(self,tag='detection'):
 		if tag == 'tracking':
@@ -82,7 +84,8 @@ class KITTI_Dataset(object):
 						ann = ann + file.to_list(tag='tracking')
 				pd.DataFrame(ann).to_csv(os.path.join(self.fm.ann_dir,str(cycle).zfill(4)+'.txt'),sep=' ',header=False,index=False)
 		else:
-			for file in self.kitti_files:
+			for i,file in enumerate(self.kitti_files):
+				file.filename = str(i).zfill(6)
 				file.save_ann()
 
 
@@ -113,6 +116,7 @@ class KITTI_File(object):
 		self.img_path = os.path.join(self.fm.img_dir,img_filename)
 
 		self.convert_to_KITTI()
+		# self.KITTI_Objects = self.KITTI_Objects[5:10]
 
 	def convert_to_KITTI(self):
 		for i,fish in enumerate(self.data.fish):
@@ -209,7 +213,7 @@ class KITTI_Object(object):
 	def load_from_fish_object(self,data):
 		self.id = data.id
 
-		self.type = 'fish'
+		self.type = 'Car'
 		self.alpha = data.alpha
 
 		self.xmin = data.xmin
@@ -229,6 +233,6 @@ class KITTI_Object(object):
 
 	def to_list(self,tag='detection',frame=0):
 		if tag == 'tracking':
-			return [frame,0,self.type,self.truncated,self.occluded,self.alpha,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.ry]
+			return [frame,self.id,self.type,self.truncated,self.occluded,self.alpha,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.ry]
 		else:
 			return [self.type,self.truncated,self.occluded,self.alpha,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.ry]

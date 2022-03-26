@@ -111,22 +111,41 @@ class Fish_File(object):
 		corners = [utils.convert_to_opencv_coord(corner) for corner in corners]
 
 		for i in range(len(corners)):
+			VISIBILITY_THR_LOWER = 0.0005 # 0.05% of the img_size
+			VISIBILITY_THR_UPPER = 0.3 # 30% of the img_size
 
-			ann_2d = self.data.ann_2d.iloc[i]
-			ann_3d = self.data.ann_3d.iloc[i]
+			obj_id = self.data.ann_2d['id'].iloc[i]
+			
+			ann_2d = self.data.ann_2d
+			ann_3d = self.data.ann_3d
+			visibility = self.data.visibility
+
+			ann_2d = ann_2d.loc[ann_2d['id'] == obj_id].iloc[0]
+			ann_3d = ann_3d.loc[ann_3d['id'] == obj_id].iloc[0]
+			# visibility = visibility.loc[visibility['id'] == obj_id].iloc[0]
+
+			# # remove fish
+			# if visibility['pct_screen_covered'] < VISIBILITY_THR_LOWER:
+			# 	continue
+			# if visibility['pct_screen_covered'] > VISIBILITY_THR_UPPER:
+			# 	continue
+
 			corner = corners[i]
-
 			fish = OpenCV_Object()
 			fish.id = int(re.findall('\d+$',ann_2d['id'])[0])
 
 			h,w,_ = cv2.imread(self.data.img_path).shape
-			bbox = utils.get_2d_box(ann_2d,h)
-			if bbox != None:
-				fish.xmin,fish.ymin,fish.xmax,fish.ymax = bbox
+			bbox = utils.get_2d_box(ann_2d,h,w)
+
+			# remove fish
+			if bbox == None:
+				continue	
+
+			fish.xmin,fish.ymin,fish.xmax,fish.ymax = bbox
 			fish.x,fish.y,fish.z = utils.get_xyz(corner)
 			fish.w,fish.h,fish.l = utils.get_whl(corner)
 
-			fish.ry = utils.get_yaw(corner[0][0],corner[-1][0],fish.x,fish.z)
+			fish.ry = utils.get_yaw(ann_3d['Head_world_x'],ann_3d['Head_world_y'],fish.x,fish.z)
 			fish.alpha = utils.get_yaw(fish.x,fish.z,0,0)
 
 			fish.obj_transform()
@@ -185,7 +204,7 @@ class OpenCV_Camera(object):
 		self.ry = cam_info['ry']
 		self.rz = cam_info['rz']
 
-		self.focal_length = 331 #tobe changed later
+		self.focal_length = data.cam_info['pixelLength']*4 #image resized to 1024
 
 		h,w,_ = cv2.imread(data.img_path).shape
 		self.set_intrinsic(w*4,h*4)

@@ -53,6 +53,7 @@ class Unity_File(object):
 
 		self.cam_transform = self.get_cam_transform(filename)
 		self.visibility = self.get_visibility(filename)
+		self.cam_info = self.get_cam_info(filename)
 
 	def get_img_path(self,filename):
 		path = os.path.join(self.data_dir,filename+'_all.jpeg')
@@ -66,6 +67,16 @@ class Unity_File(object):
 	def get_ann_3d(self,filename):
 		path = os.path.join(self.data_dir,filename+'_Box3D.csv')
 		data = pd.read_csv(path) if os.path.exists(path) else None
+
+		# UPDATE change the order
+		data = data[['id','camera rel origin_x','camera rel origin_y','camera rel origin_z','pitch','yaw',
+					'roll','p0_world_x','p0_world_y','p0_world_z','p1_world_x','p1_world_y','p1_world_z',
+					'p2_world_x','p2_world_y','p2_world_z','p3_world_x','p3_world_y','p3_world_z','p4_world_x',
+					'p4_world_y','p4_world_z','p5_world_x','p5_world_y','p5_world_z','p6_world_x','p6_world_y',
+					'p6_world_z','p7_world_x','p7_world_y','p7_world_z','p0_screen_x','p0_screen_y','p1_screen_x',
+					'p1_screen_y','p2_screen_x','p2_screen_y','p3_screen_x','p3_screen_y','p4_screen_x','p4_screen_y',
+					'p5_screen_x','p5_screen_y','p6_screen_x','p6_screen_y','p7_screen_x','p7_screen_y','Head_world_x',
+					'Head_world_y','Head_world_z']]
 		return data
 
 	def get_cam_transform(self,filename):
@@ -76,6 +87,12 @@ class Unity_File(object):
 	def get_visibility(self,filename):
 		path = os.path.join(self.data_dir,filename+'_visibility.csv')
 		data = pd.read_csv(path) if os.path.exists(path) else None
+		return data
+
+	def get_cam_info(self,filename):
+		path = os.path.join(self.data_dir,'cycle_0_env_params.json')
+		data = json.load(open(path))
+		data = next(x for x in data['cameraParameters'] if x["name"] == 'cam'+self.cam_id)
 		return data
 
 	def print_info(self):

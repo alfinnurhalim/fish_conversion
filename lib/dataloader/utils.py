@@ -27,7 +27,7 @@ def get_filenames(dataset_dir):
 def extract_file_info(filename):
 	cycle_id = re.findall('(?<=cycle_).*(?=_frame)',filename)[0].zfill(4)
 	frame_id = re.findall('(?<=frame_).*(?=_cam)',filename)[0].zfill(4)
-	cam_id = re.findall('(?<=_cam).*',filename)[0].zfill(4)
+	cam_id = re.findall('(?<=_cam).*',filename)[0]
 
 	return cycle_id,frame_id,cam_id
 
