@@ -11,6 +11,8 @@ BASE_DIR = os.path.dirname(os.path.abspath('fish_conversion'))
 sys.path.append(BASE_DIR)
 
 from lib.dataloader.Unity_dataloader import load_unity_dataset
+from lib.dataloader.Testing_dataloader import load_testing_dataset
+
 from lib.folder_manager.OpenCV_folder_manager import OpenCV_folder_manager
 from lib.folder_manager.KITTI_folder_manager import KITTI_folder_manager
 from lib.folder_manager.COCO_folder_manager import COCO_folder_manager
@@ -18,27 +20,31 @@ from lib.folder_manager.COCO_folder_manager import COCO_folder_manager
 from lib.dataset.OpenCV_Dataset import OpenCV_Dataset
 from lib.dataset.COCO_Dataset import COCO_Dataset
 from lib.dataset.KITTI_Dataset import KITTI_Dataset
+from lib.dataset.Testing_Dataset import Testing_Dataset
 
 #=================================================CONFIGURATIONS==============================================================
 # root dir 
-DATASET_DIR = '../synthetic_dataset/multicam_8/cam1'
+DATASET_DIR = './data/testing_1_350'
 
-DATASET_NAME = 'multicam_8_cam1_1k'
+DATASET_NAME = 'testing_1_350_output'
 # os.path.basename(DATASET_DIR)
 
 # number of data will be used
-DATA_NUM = 1000
+DATA_NUM = 20
+
+# Focal Length in pixel
+FOCAL_LENGTH = 350
 
 #=============================================LOAD FROM UNITY=============================================================
 
-unity_dataset = load_unity_dataset(dataset_dir = DATASET_DIR,data_num = DATA_NUM)
+testing_dataset = load_testing_dataset(dataset_dir = DATASET_DIR,focal_length=FOCAL_LENGTH,data_num = DATA_NUM)
 
 #=============================================CONVERT TO OPENCV=============================================================
 fm = OpenCV_folder_manager(data_dir=DATASET_DIR,name=DATASET_NAME)
 fm.create_folder()
 
 opencv_dataset = OpenCV_Dataset()
-opencv_dataset.load_from_unity(unity_dataset,fm)
+opencv_dataset.load_from_testing(testing_dataset,fm)
 opencv_dataset.save_image()
 # opencv_dataset.save_to_json()
 # opencv_dataset.save_to_pkl()

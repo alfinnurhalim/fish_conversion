@@ -18,8 +18,11 @@ from tqdm import tqdm
 
 import lib.dataset.opencv_utils as utils 
 
+IMAGE_SIZE = 1024
+RESIZE_FACTOR = 1
+
 class OpenCV_Dataset(object):
-	def __init__(self):
+	def __init__(self,image_size=256,resize_factor=4):
 		self.data_dir = None
 		self.fm = None
 
@@ -33,6 +36,17 @@ class OpenCV_Dataset(object):
 		for unity_file in tqdm(Dataset.unity_files):
 			fish_file = Fish_File()
 			fish_file.load_from_unity(unity_file,self.fm)
+			fish_file.convert_to_opencv()
+			self.fish_files.append(fish_file)
+
+	def load_from_testing(self,Dataset,folder_manager):
+		print('converting to opencv format')
+		self.fm = folder_manager
+		self.data_dir = Dataset.data_dir
+
+		for testing_file in tqdm(Dataset.testing_files):
+			fish_file = Fish_File()
+			fish_file.load_from_unity(testing_file,self.fm) #testing has same format as unity
 			fish_file.convert_to_opencv()
 			self.fish_files.append(fish_file)
 
@@ -88,13 +102,14 @@ class Fish_File(object):
 		self.cycle = int(data.cycle)
 		self.frame = int(data.frame)
 
-		self._zero_index_error_fix()
+		# self._zero_index_error_fix()
 
 		cam_info = utils.get_cam_info(self.data.cam_transform)
 		self.camera.load_from_unity(data,cam_info)
 
 		img_filename = str(self.cycle).zfill(4)+'_'+str(self.frame).zfill(4)+'.jpg'
 		self.img_path = os.path.join(self.fm.img_dir,img_filename)
+		
 		
 
 	def _zero_index_error_fix(self):
@@ -111,8 +126,10 @@ class Fish_File(object):
 		corners = [utils.convert_to_opencv_coord(corner) for corner in corners]
 
 		for i in range(len(corners)):
-			VISIBILITY_THR_LOWER = 0.0005 # 0.05% of the img_size
+			VISIBILITY_THR_LOWER = 0.0001 # 0.05% of the img_size
 			VISIBILITY_THR_UPPER = 0.3 # 30% of the img_size
+
+			Z_THR_LOWER = 0.2 #remove fish that's to close to the cam
 
 			obj_id = self.data.ann_2d['id'].iloc[i]
 			
@@ -122,13 +139,13 @@ class Fish_File(object):
 
 			ann_2d = ann_2d.loc[ann_2d['id'] == obj_id].iloc[0]
 			ann_3d = ann_3d.loc[ann_3d['id'] == obj_id].iloc[0]
-			# visibility = visibility.loc[visibility['id'] == obj_id].iloc[0]
+			visibility = visibility.loc[visibility['id'] == obj_id].iloc[0]
 
-			# # remove fish
-			# if visibility['pct_screen_covered'] < VISIBILITY_THR_LOWER:
-			# 	continue
-			# if visibility['pct_screen_covered'] > VISIBILITY_THR_UPPER:
-			# 	continue
+			# remove fish
+			if visibility['pct_screen_covered'] < VISIBILITY_THR_LOWER:
+				continue
+			if visibility['pct_screen_covered'] > VISIBILITY_THR_UPPER:
+				continue
 
 			corner = corners[i]
 			fish = OpenCV_Object()
@@ -139,11 +156,14 @@ class Fish_File(object):
 
 			# remove fish
 			if bbox == None:
-				continue	
+				continue
 
 			fish.xmin,fish.ymin,fish.xmax,fish.ymax = bbox
 			fish.x,fish.y,fish.z = utils.get_xyz(corner)
 			fish.w,fish.h,fish.l = utils.get_whl(corner)
+
+			if fish.z < Z_THR_LOWER:
+				continue
 
 			fish.ry = utils.get_yaw(ann_3d['Head_world_x'],ann_3d['Head_world_y'],fish.x,fish.z)
 			fish.alpha = utils.get_yaw(fish.x,fish.z,0,0)
@@ -168,7 +188,7 @@ class Fish_File(object):
 		return file_dict
 
 	def _image_transform(self,img):
-		img = cv2.resize(img,(1024,1024))
+		img = cv2.resize(img,(IMAGE_SIZE*RESIZE_FACTOR,IMAGE_SIZE*RESIZE_FACTOR))
 		return img
 
 	def save_image(self):
@@ -194,6 +214,7 @@ class OpenCV_Camera(object):
 		self.intrinsic = None
 
 	def load_from_unity(self,data,cam_info):
+		resize_factor = 2
 		self.cam_id = data.cam_transform.iloc[0]['name']
 
 		self.x = cam_info['x']
@@ -204,10 +225,10 @@ class OpenCV_Camera(object):
 		self.ry = cam_info['ry']
 		self.rz = cam_info['rz']
 
-		self.focal_length = data.cam_info['pixelLength']*4 #image resized to 1024
+		self.focal_length = data.cam_info['pixelLength']*RESIZE_FACTOR #image resized to 1024
 
 		h,w,_ = cv2.imread(data.img_path).shape
-		self.set_intrinsic(w*4,h*4)
+		self.set_intrinsic(w*RESIZE_FACTOR,h*RESIZE_FACTOR)
 		self.set_extrinsic_to_identity()
 		self.set_to_origin()
 
@@ -288,10 +309,10 @@ class OpenCV_Object(object):
 		self.alpha = None
 
 	def obj_transform(self):
-		self.xmin = self.xmin*4
-		self.ymin = self.ymin*4
-		self.xmax = self.xmax*4
-		self.ymax = self.ymax*4
+		self.xmin = self.xmin*RESIZE_FACTOR
+		self.ymin = self.ymin*RESIZE_FACTOR
+		self.xmax = self.xmax*RESIZE_FACTOR
+		self.ymax = self.ymax*RESIZE_FACTOR
 
 	def to_dict(self):
 		fish = {

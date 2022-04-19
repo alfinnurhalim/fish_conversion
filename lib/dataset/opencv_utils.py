@@ -55,9 +55,9 @@ def convert_to_cam_coord(data,cam_info):
 	data[2] = data[2] - cam_info['z']
 
 	# rotate CCW
-	rx = cam_info['rx']
+	rx = -cam_info['rx']
 	ry = -cam_info['ry']
-	rz = cam_info['rz']
+	rz = -cam_info['rz']
 
 	r = R.from_euler('xyz', [rx, ry, rz], degrees=True).as_matrix()
 
@@ -123,8 +123,14 @@ def get_xyz(corner):
 	return (x,y,z)
 
 def get_whl(corner):
+	# w = max(corner[0]) - min(corner[0])
+	# h = max(corner[1]) - min(corner[1])
+	# l = max(corner[2]) - min(corner[2])
+	
 	pts = [x for x in zip(corner[0],corner[1],corner[2])]
-	w,h,l = round(calculate_distance(pts[0],pts[1]),2),round(calculate_distance(pts[0],pts[4]),2),round(calculate_distance(pts[0],pts[2]),2)
+	w = round(calculate_distance(pts[0],pts[1]),2)
+	h = round(calculate_distance(pts[0],pts[4]),2)
+	l = round(calculate_distance(pts[0],pts[2]),2)
 	return (w,h,l)
 
 def calculate_distance(pts_0,pts_1):

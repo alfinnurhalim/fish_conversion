@@ -80,7 +80,7 @@ class Unity_File(object):
 		return data
 
 	def get_cam_transform(self,filename):
-		path =  os.path.join(self.data_dir,filename[:-5]+'_camera_transform.csv')
+		path =  os.path.join(self.data_dir,filename[:-5]+'_camera_transform.csv') #10 for camCenter
 		data = pd.read_csv(path) if os.path.exists(path) else None
 		return data
 
@@ -92,7 +92,7 @@ class Unity_File(object):
 	def get_cam_info(self,filename):
 		path = os.path.join(self.data_dir,'cycle_0_env_params.json')
 		data = json.load(open(path))
-		data = next(x for x in data['cameraParameters'] if x["name"] == 'cam'+self.cam_id)
+		data = next(x for x in data['cameraParameters'] if (x["name"] == 'cam'+self.cam_id) and x['useThisCamera']==True)
 		return data
 
 	def print_info(self):

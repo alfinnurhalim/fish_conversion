@@ -130,7 +130,7 @@ class KITTI_File(object):
 
 	def save_image(self):
 		img = cv2.imread(self.data.img_path)
-		img = self._image_transform(img)
+		# img = self._image_transform(img)
 
 		cv2.imwrite(self.img_path,img)
 
