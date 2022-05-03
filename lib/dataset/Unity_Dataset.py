@@ -61,32 +61,47 @@ class Unity_File(object):
 
 	def get_ann_2d(self,filename):
 		path = os.path.join(self.data_dir,filename+'_Box2D.csv')
-		data = pd.read_csv(path) if os.path.exists(path) else None
+		try:
+			data = pd.read_csv(path) if os.path.exists(path) else None
+		except:
+			data = pd.DataFrame(columns=['id','p0_x','p0_y','p1_x','p1_y','p2_x','p2_y','p3_x','p3_y'	])
 		return data
 
 	def get_ann_3d(self,filename):
 		path = os.path.join(self.data_dir,filename+'_Box3D.csv')
-		data = pd.read_csv(path) if os.path.exists(path) else None
-
-		# UPDATE change the order
-		data = data[['id','camera rel origin_x','camera rel origin_y','camera rel origin_z','pitch','yaw',
+		column_names = ['id','camera rel origin_x','camera rel origin_y','camera rel origin_z','pitch','yaw',
 					'roll','p0_world_x','p0_world_y','p0_world_z','p1_world_x','p1_world_y','p1_world_z',
 					'p2_world_x','p2_world_y','p2_world_z','p3_world_x','p3_world_y','p3_world_z','p4_world_x',
 					'p4_world_y','p4_world_z','p5_world_x','p5_world_y','p5_world_z','p6_world_x','p6_world_y',
 					'p6_world_z','p7_world_x','p7_world_y','p7_world_z','p0_screen_x','p0_screen_y','p1_screen_x',
 					'p1_screen_y','p2_screen_x','p2_screen_y','p3_screen_x','p3_screen_y','p4_screen_x','p4_screen_y',
 					'p5_screen_x','p5_screen_y','p6_screen_x','p6_screen_y','p7_screen_x','p7_screen_y','Head_world_x',
-					'Head_world_y','Head_world_z']]
+					'Head_world_y','Head_world_z','CamRel_Length','CamRel_Height','CamRel_Width']
+		try:
+			data = pd.read_csv(path) if os.path.exists(path) else None
+
+			# UPDATE change the order
+			data = data[column_names]
+		except:
+			data = pd.DataFrame(columns=column_names)
+
 		return data
 
 	def get_cam_transform(self,filename):
-		path =  os.path.join(self.data_dir,filename[:-5]+'_camera_transform.csv') #10 for camCenter
-		data = pd.read_csv(path) if os.path.exists(path) else None
+		path =  os.path.join(self.data_dir,filename[:-12]+'_camera_transform.csv') #10 for camCenter, 5 rest. 16 fo camExtra2
+		try:
+			data = pd.read_csv(path) if os.path.exists(path) else None
+		except:
+			data = pd.DataFrame(columns=['name','global_pos_x','global_pos_y','global_pos_z','global_rot_x','global_rot_y',
+										'global_rot_z','global_rot_w','EulerAngle_x','EulerAngle_y','EulerAngle_z'])
 		return data
 
 	def get_visibility(self,filename):
 		path = os.path.join(self.data_dir,filename+'_visibility.csv')
-		data = pd.read_csv(path) if os.path.exists(path) else None
+		try:
+			data = pd.read_csv(path) if os.path.exists(path) else None
+		except:
+			data = pd.DataFrame(columns=['id','pct_screen_covered','non_occluded_pixels','visibility_estimate'])
 		return data
 
 	def get_cam_info(self,filename):

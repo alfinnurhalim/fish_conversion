@@ -26,14 +26,14 @@ from lib.dataset.Testing_Dataset import Testing_Dataset
 # root dir 
 DATASET_DIR = './data/testing_1_350'
 
-DATASET_NAME = 'testing_1_350_output'
+DATASET_NAME = '20220428_qd3dt_1024_1_testing_real'
 # os.path.basename(DATASET_DIR)
 
 # number of data will be used
 DATA_NUM = 20
 
 # Focal Length in pixel
-FOCAL_LENGTH = 350
+FOCAL_LENGTH = 208
 
 #=============================================LOAD FROM UNITY=============================================================
 

@@ -140,7 +140,7 @@ def calculate_distance(pts_0,pts_1):
 
 	return dis
 
-def get_yaw(x,z,cx,cz):
+def get_alpha(x,z,cx,cz):
 	dx = (x-cx)
 	dz = (z-cz)
 	
@@ -153,3 +153,9 @@ def get_yaw(x,z,cx,cz):
 			yaw = np.pi/2
 	yaw = yaw + np.pi/2
 	return round(yaw,2)
+
+def get_yaw(ry,cam_ry):
+	yaw = ry 
+	yaw = math.radians(yaw)
+
+	return yaw

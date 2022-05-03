@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 import lib.dataset.opencv_utils as utils 
 
-IMAGE_SIZE = 1024
+IMAGE_SIZE = 512
 RESIZE_FACTOR = 1
 
 class OpenCV_Dataset(object):
@@ -109,8 +109,6 @@ class Fish_File(object):
 
 		img_filename = str(self.cycle).zfill(4)+'_'+str(self.frame).zfill(4)+'.jpg'
 		self.img_path = os.path.join(self.fm.img_dir,img_filename)
-		
-		
 
 	def _zero_index_error_fix(self):
 		# somehow cycle 0 frame 0 is always a blank black image, we removed it and make frame 1 index = 0
@@ -141,12 +139,6 @@ class Fish_File(object):
 			ann_3d = ann_3d.loc[ann_3d['id'] == obj_id].iloc[0]
 			visibility = visibility.loc[visibility['id'] == obj_id].iloc[0]
 
-			# remove fish
-			if visibility['pct_screen_covered'] < VISIBILITY_THR_LOWER:
-				continue
-			if visibility['pct_screen_covered'] > VISIBILITY_THR_UPPER:
-				continue
-
 			corner = corners[i]
 			fish = OpenCV_Object()
 			fish.id = int(re.findall('\d+$',ann_2d['id'])[0])
@@ -160,14 +152,26 @@ class Fish_File(object):
 
 			fish.xmin,fish.ymin,fish.xmax,fish.ymax = bbox
 			fish.x,fish.y,fish.z = utils.get_xyz(corner)
+			# fish.h = ann_3d['CamRel_Height']
+			# fish.w = ann_3d['CamRel_Width']
+			# fish.l = ann_3d['CamRel_Length']
 			fish.w,fish.h,fish.l = utils.get_whl(corner)
 
+
+			# fish.rx = utils.get_yaw(ann_3d['Head_world_x'],ann_3d['Head_world_y'],fish.x,fish.z)
+			fish.ry = utils.get_yaw(ann_3d['yaw'],cam_info['ry'])
+			# fish.rz = utils.get_yaw(ann_3d['Head_world_x'],ann_3d['Head_world_z'],fish.x,fish.z)
+
+			fish.alpha = utils.get_alpha(fish.x,fish.z,0,0)
+
+			# remove fish
 			if fish.z < Z_THR_LOWER:
 				continue
-
-			fish.ry = utils.get_yaw(ann_3d['Head_world_x'],ann_3d['Head_world_y'],fish.x,fish.z)
-			fish.alpha = utils.get_yaw(fish.x,fish.z,0,0)
-
+			if visibility['pct_screen_covered'] < VISIBILITY_THR_LOWER:
+				continue
+			if visibility['pct_screen_covered'] > VISIBILITY_THR_UPPER:
+				continue
+				
 			fish.obj_transform()
 			self.fish.append(fish)
 
@@ -214,7 +218,6 @@ class OpenCV_Camera(object):
 		self.intrinsic = None
 
 	def load_from_unity(self,data,cam_info):
-		resize_factor = 2
 		self.cam_id = data.cam_transform.iloc[0]['name']
 
 		self.x = cam_info['x']
@@ -227,8 +230,8 @@ class OpenCV_Camera(object):
 
 		self.focal_length = data.cam_info['pixelLength']*RESIZE_FACTOR #image resized to 1024
 
-		h,w,_ = cv2.imread(data.img_path).shape
-		self.set_intrinsic(w*RESIZE_FACTOR,h*RESIZE_FACTOR)
+		# h,w,_ = cv2.imread(data.img_path).shape
+		self.set_intrinsic(IMAGE_SIZE*RESIZE_FACTOR,IMAGE_SIZE*RESIZE_FACTOR)
 		self.set_extrinsic_to_identity()
 		self.set_to_origin()
 
@@ -305,7 +308,9 @@ class OpenCV_Object(object):
 		self.l = None
 
 		# 3d rotation
+		self.rx = None
 		self.ry = None
+		self.rz = None
 		self.alpha = None
 
 	def obj_transform(self):
@@ -331,7 +336,10 @@ class OpenCV_Object(object):
 			'w' : self.w,
 			'l' : self.l,
 
+			'rx' : self.rx,
 			'ry' : self.ry,
+			'rz' : self.rz,
+			
 			'alpha' : self.alpha
 		}
 		return fish
