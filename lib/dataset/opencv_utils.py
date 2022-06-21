@@ -100,6 +100,10 @@ def get_2d_box(data,h,w):
 	if (xmin <0 and xmax >w) and (ymin < 0 and ymax > h):
 		return None
 
+	# to remove all fish that's in the corner
+	if (xmin <0 or xmax >w) or (ymin < 0 or ymax > h):
+		return None
+
 	if xmin < 0:
 		xmin = 0
 	if ymin < 0:

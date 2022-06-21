@@ -12,6 +12,7 @@ import cv2
 import pickle
 import json
 import numpy as np
+import math 
 
 from scipy.spatial.transform import Rotation as R
 from tqdm import tqdm
@@ -20,6 +21,21 @@ import lib.dataset.opencv_utils as utils
 
 IMAGE_SIZE = 512
 RESIZE_FACTOR = 1
+
+# Occluded pixel thr
+VISIBILITY_THR_LOWER = 0.0001 # 0.05% of the img_size
+VISIBILITY_THR_UPPER = 0.3 # 30% of the img_size
+
+# Fog visibility thr
+FOG_VIS_THR = 0.001
+
+# Depth thr
+Z_THR_LOWER = 0.2 
+Z_THR_UPPER = 4
+
+# Box Area thr
+BBOX_2D_AREA_THR_LOWER = IMAGE_SIZE*0.05
+BBOX_2D_AREA_THR_UPPER = IMAGE_SIZE*0.8
 
 class OpenCV_Dataset(object):
 	def __init__(self,image_size=256,resize_factor=4):
@@ -124,19 +140,16 @@ class Fish_File(object):
 		corners = [utils.convert_to_opencv_coord(corner) for corner in corners]
 
 		for i in range(len(corners)):
-			VISIBILITY_THR_LOWER = 0.0001 # 0.05% of the img_size
-			VISIBILITY_THR_UPPER = 0.3 # 30% of the img_size
-
-			Z_THR_LOWER = 0.2 #remove fish that's to close to the cam
-
 			obj_id = self.data.ann_2d['id'].iloc[i]
 			
 			ann_2d = self.data.ann_2d
 			ann_3d = self.data.ann_3d
 			visibility = self.data.visibility
+			cam_dist_rot = self.data.cam_dist_rot
 
 			ann_2d = ann_2d.loc[ann_2d['id'] == obj_id].iloc[0]
 			ann_3d = ann_3d.loc[ann_3d['id'] == obj_id].iloc[0]
+			cam_dist_rot = cam_dist_rot.loc[cam_dist_rot['id'] == obj_id].iloc[0]
 			visibility = visibility.loc[visibility['id'] == obj_id].iloc[0]
 
 			corner = corners[i]
@@ -147,29 +160,44 @@ class Fish_File(object):
 			bbox = utils.get_2d_box(ann_2d,h,w)
 
 			# remove fish
-			if bbox == None:
+			if bbox == None or self.frame == 0:
+				continue
+
+			xmin,ymin,xmax,ymax = bbox
+			bbox_area = np.sqrt(abs(xmax-xmin)*abs(ymax-ymin))
+			# print(bbox_area)
+
+			# remove fish
+			if bbox_area < BBOX_2D_AREA_THR_LOWER:
+				continue
+			if bbox_area > BBOX_2D_AREA_THR_UPPER:
 				continue
 
 			fish.xmin,fish.ymin,fish.xmax,fish.ymax = bbox
 			fish.x,fish.y,fish.z = utils.get_xyz(corner)
-			# fish.h = ann_3d['CamRel_Height']
-			# fish.w = ann_3d['CamRel_Width']
-			# fish.l = ann_3d['CamRel_Length']
-			fish.w,fish.h,fish.l = utils.get_whl(corner)
+			fish.h = ann_3d['Height']
+			fish.w = ann_3d['Width']
+			fish.l = ann_3d['Length']
 
+			fish.rx = cam_dist_rot['rel_theta_x']
+			fish.ry = cam_dist_rot['rel_theta_y'] 
+			fish.rz = cam_dist_rot['rel_theta_z'] 
 
-			# fish.rx = utils.get_yaw(ann_3d['Head_world_x'],ann_3d['Head_world_y'],fish.x,fish.z)
-			fish.ry = utils.get_yaw(ann_3d['yaw'],cam_info['ry'])
-			# fish.rz = utils.get_yaw(ann_3d['Head_world_x'],ann_3d['Head_world_z'],fish.x,fish.z)
+			fish.alphax = cam_dist_rot['l_theta_x']
+			fish.alphay = cam_dist_rot['l_theta_y']
 
 			fish.alpha = utils.get_alpha(fish.x,fish.z,0,0)
 
 			# remove fish
 			if fish.z < Z_THR_LOWER:
 				continue
+			if fish.z > Z_THR_UPPER	:
+				continue
 			if visibility['pct_screen_covered'] < VISIBILITY_THR_LOWER:
 				continue
 			if visibility['pct_screen_covered'] > VISIBILITY_THR_UPPER:
+				continue
+			if visibility['visibility_estimate'] < FOG_VIS_THR:
 				continue
 				
 			fish.obj_transform()
@@ -192,7 +220,7 @@ class Fish_File(object):
 		return file_dict
 
 	def _image_transform(self,img):
-		img = cv2.resize(img,(IMAGE_SIZE*RESIZE_FACTOR,IMAGE_SIZE*RESIZE_FACTOR))
+		img = cv2.resize(img,(int(IMAGE_SIZE*RESIZE_FACTOR),int(IMAGE_SIZE*RESIZE_FACTOR)))
 		return img
 
 	def save_image(self):
@@ -231,7 +259,7 @@ class OpenCV_Camera(object):
 		self.focal_length = data.cam_info['pixelLength']*RESIZE_FACTOR #image resized to 1024
 
 		# h,w,_ = cv2.imread(data.img_path).shape
-		self.set_intrinsic(IMAGE_SIZE*RESIZE_FACTOR,IMAGE_SIZE*RESIZE_FACTOR)
+		self.set_intrinsic((IMAGE_SIZE*RESIZE_FACTOR),(IMAGE_SIZE*RESIZE_FACTOR))
 		self.set_extrinsic_to_identity()
 		self.set_to_origin()
 
@@ -311,7 +339,10 @@ class OpenCV_Object(object):
 		self.rx = None
 		self.ry = None
 		self.rz = None
-		self.alpha = None
+
+		# Local Orient
+		self.alphax = None
+		self.alphay = None
 
 	def obj_transform(self):
 		self.xmin = self.xmin*RESIZE_FACTOR
@@ -340,7 +371,7 @@ class OpenCV_Object(object):
 			'ry' : self.ry,
 			'rz' : self.rz,
 			
-			'alpha' : self.alpha
+			'alpha' : self.alphay
 		}
 		return fish
 

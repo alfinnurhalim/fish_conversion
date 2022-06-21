@@ -54,6 +54,7 @@ class Unity_File(object):
 		self.cam_transform = self.get_cam_transform(filename)
 		self.visibility = self.get_visibility(filename)
 		self.cam_info = self.get_cam_info(filename)
+		self.cam_dist_rot = self.get_cam_dist_rot(filename)
 
 	def get_img_path(self,filename):
 		path = os.path.join(self.data_dir,filename+'_all.jpeg')
@@ -76,7 +77,7 @@ class Unity_File(object):
 					'p6_world_z','p7_world_x','p7_world_y','p7_world_z','p0_screen_x','p0_screen_y','p1_screen_x',
 					'p1_screen_y','p2_screen_x','p2_screen_y','p3_screen_x','p3_screen_y','p4_screen_x','p4_screen_y',
 					'p5_screen_x','p5_screen_y','p6_screen_x','p6_screen_y','p7_screen_x','p7_screen_y','Head_world_x',
-					'Head_world_y','Head_world_z','CamRel_Length','CamRel_Height','CamRel_Width']
+					'Head_world_y','Head_world_z','CamRel_Length','CamRel_Height','CamRel_Width','Length','Height','Width']
 		try:
 			data = pd.read_csv(path) if os.path.exists(path) else None
 
@@ -88,7 +89,7 @@ class Unity_File(object):
 		return data
 
 	def get_cam_transform(self,filename):
-		path =  os.path.join(self.data_dir,filename[:-12]+'_camera_transform.csv') #10 for camCenter, 5 rest. 16 fo camExtra2
+		path =  os.path.join(self.data_dir,filename[:-5]+'_camera_transform.csv') #10 for camCenter, 5 rest. 16 fo camExtra2
 		try:
 			data = pd.read_csv(path) if os.path.exists(path) else None
 		except:
@@ -99,7 +100,7 @@ class Unity_File(object):
 	def get_visibility(self,filename):
 		path = os.path.join(self.data_dir,filename+'_visibility.csv')
 		try:
-			data = pd.read_csv(path) if os.path.exists(path) else None
+			data = pd.read_csv(path)
 		except:
 			data = pd.DataFrame(columns=['id','pct_screen_covered','non_occluded_pixels','visibility_estimate'])
 		return data
@@ -108,6 +109,12 @@ class Unity_File(object):
 		path = os.path.join(self.data_dir,'cycle_0_env_params.json')
 		data = json.load(open(path))
 		data = next(x for x in data['cameraParameters'] if (x["name"] == 'cam'+self.cam_id) and x['useThisCamera']==True)
+		
+		return data
+
+	def get_cam_dist_rot(self,filename):
+		path = os.path.join(self.data_dir,filename+'_cam_dist_rot.csv')
+		data = pd.read_csv(path)
 		return data
 
 	def print_info(self):

@@ -17,17 +17,17 @@ from lib.folder_manager.COCO_folder_manager import COCO_folder_manager
 
 from lib.dataset.OpenCV_Dataset import OpenCV_Dataset
 from lib.dataset.COCO_Dataset import COCO_Dataset
-from lib.dataset.KITTI_Dataset import KITTI_Dataset
+from lib.dataset.ModKITTI_Dataset import KITTI_Dataset
 
 #=================================================CONFIGURATIONS==============================================================
 # root dir 
-DATASET_DIR = '../synthetic_dataset/20220502_qd3dt_512_1/camCenterExtra2'
+DATASET_DIR = '../synthetic_dataset/20220618_qd3dt_512/cam6'
 
-DATASET_NAME = '20220502_qd3dt_512_1_camCenterExtra2'
+DATASET_NAME = '20220618_qd3dt_512'
 # os.path.basename(DATASET_DIR)
 
 # number of data will be used
-DATA_NUM = 9999999999999999999999
+DATA_NUM = 3000
 
 #=============================================LOAD FROM UNITY=============================================================
 

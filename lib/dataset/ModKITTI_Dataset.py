@@ -15,13 +15,14 @@ import os
 import re
 import json
 import pickle
+import math 
 
 import pandas as pd 
 import lib.dataloader.utils as utils
 
 from tqdm import tqdm
 
-class ModKITTI_Dataset(object):
+class KITTI_Dataset(object):
 	def __init__(self):
 		self.data_dir = None
 		self.fm = None
@@ -34,7 +35,7 @@ class ModKITTI_Dataset(object):
 		self.data_dir = Dataset.data_dir
 
 		for fish_file in tqdm(Dataset.fish_files):
-			kitti_file = ModKITTI_File()
+			kitti_file = KITTI_File()
 			kitti_file.load_from_fish_file(fish_file,self.fm)
 			self.kitti_files.append(kitti_file)
 
@@ -89,7 +90,7 @@ class ModKITTI_Dataset(object):
 				file.save_ann()
 
 
-class ModKITTI_File(object):
+class KITTI_File(object):
 	def __init__(self):
 		self.data = None
 		self.fm = None
@@ -97,7 +98,7 @@ class ModKITTI_File(object):
 		self.filename = None
 		self.cycle = None
 		self.frame = None
-		self.camera = ModKITTI_Camera()
+		self.camera = KITTI_Camera()
 
 		self.img_path = None
 		self.KITTI_Objects = []
@@ -120,7 +121,7 @@ class ModKITTI_File(object):
 
 	def convert_to_KITTI(self):
 		for i,fish in enumerate(self.data.fish):
-			kitti = ModKITTI_Object()
+			kitti = KITTI_Object()
 			kitti.load_from_fish_object(data=fish)
 			self.KITTI_Objects.append(kitti)
 
@@ -145,7 +146,7 @@ class ModKITTI_File(object):
 		pd.DataFrame(label).to_csv(out_path,sep=' ',header=False,index=False)
 
 
-class ModKITTI_Camera(object):
+class KITTI_Camera(object):
 	def __init__(self):
 		self.intrinsic = None
 		self.extrinsic = None
@@ -163,7 +164,7 @@ class ModKITTI_Camera(object):
 	def save_camera(self,fm,filename):
 		out_path = os.path.join(fm.calib_dir,filename+'.txt')
 
-		intrinsic = ' '.join([str(int(x)) for x in list(np.array(self.intrinsic).flatten())])
+		intrinsic = ' '.join([str((x)) for x in list(np.array(self.intrinsic).flatten())])
 		P0 = 'P0: ' + intrinsic
 		P1 = 'P1: ' + intrinsic
 		P2 = 'P2: ' + intrinsic
@@ -179,7 +180,7 @@ class ModKITTI_Camera(object):
 			for line in cam:
 				f.write(line + '\n')
 
-class ModKITTI_Object(object):
+class KITTI_Object(object):
 	def __init__(self):
 		# id
 		self.id = None
@@ -189,7 +190,8 @@ class ModKITTI_Object(object):
 		self.truncated = 0
 		self.occluded = 0
 
-		self.alpha = None
+		self.alphax = None
+		self.alphay = None
 
 		# 2d bbox
 		self.xmin = None
@@ -216,7 +218,9 @@ class ModKITTI_Object(object):
 		self.id = data.id
 
 		self.type = 'Car'
-		self.alpha = data.alpha
+
+		self.alphax = math.radians(int(data.alphax))
+		self.alphay = math.radians(int(data.alphay))
 
 		self.xmin = data.xmin
 		self.ymin = data.ymin
@@ -224,19 +228,19 @@ class ModKITTI_Object(object):
 		self.ymax = data.ymax
 
 		self.h = data.h 
-		self.w = data.w 
-		self.l = data.l 
+		self.w = data.w #w and l swapped 
+		self.l = data.l  
 
 		self.x = data.x
-		self.y = data.y + self.h/2
+		self.y = data.y
 		self.z = data.z 
 
-		self.rx = data.rx
-		self.ry = data.ry
-		self.rz = data.rz
+		self.rx = math.radians(int(data.rx) * -1)
+		self.ry = math.radians(int(data.ry))
+		self.rz = math.radians(int(data.rz) * -1)
 
 	def to_list(self,tag='detection',frame=0):
 		if tag == 'tracking':
-			return [frame,self.id,self.type,self.truncated,self.occluded,self.alpha,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.rx,self.ry,self.rz]
+			return [frame,self.id,self.type,self.truncated,self.occluded,self.alphax,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.rx,self.ry,self.rz,self.alphay]
 		else:
-			return [self.type,self.truncated,self.occluded,self.alpha,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.rx,self.ry,self.rz]
+			return [self.type,self.truncated,self.occluded,self.alphax,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.rx,self.ry,self.rz,self.alphay]
