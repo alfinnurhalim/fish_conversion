@@ -21,13 +21,13 @@ from lib.dataset.ModKITTI_Dataset import KITTI_Dataset
 
 #=================================================CONFIGURATIONS==============================================================
 # root dir 
-DATASET_DIR = '../synthetic_dataset/20220618_qd3dt_512/cam6'
+DATASET_DIR = '../synthetic_dataset/20220716_qd3dt_512_red'
 
-DATASET_NAME = '20220618_qd3dt_512'
+DATASET_NAME = '20220716_qd3dt_512_red'
 # os.path.basename(DATASET_DIR)
 
 # number of data will be used
-DATA_NUM = 3000
+DATA_NUM = 9999999999
 
 #=============================================LOAD FROM UNITY=============================================================
 
@@ -84,14 +84,14 @@ kitti_dataset.save_ann(tag=tag)
 print('Dataset Converted Successfully')
 
 #=============================================CONVERT TO KITTI Tracking =============================================================
-tag = 'tracking'
-fm = KITTI_folder_manager(data_dir=DATASET_DIR,name=DATASET_NAME,tag=tag,split='training')
-fm.create_folder()
+# tag = 'tracking'
+# fm = KITTI_folder_manager(data_dir=DATASET_DIR,name=DATASET_NAME,tag=tag,split='training')
+# fm.create_folder()
 
-kitti_dataset = KITTI_Dataset()
-kitti_dataset.load_from_opencv(opencv_dataset,fm)
+# kitti_dataset = KITTI_Dataset()
+# kitti_dataset.load_from_opencv(opencv_dataset,fm)
 
-kitti_dataset.save_image(tag=tag)
-kitti_dataset.save_camera(tag=tag)
-kitti_dataset.save_ann(tag=tag)
-print('Dataset Converted Successfully')
+# kitti_dataset.save_image(tag=tag)
+# kitti_dataset.save_camera(tag=tag)
+# kitti_dataset.save_ann(tag=tag)
+# print('Dataset Converted Successfully')

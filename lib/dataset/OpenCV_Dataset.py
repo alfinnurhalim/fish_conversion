@@ -19,11 +19,13 @@ from tqdm import tqdm
 
 import lib.dataset.opencv_utils as utils 
 
+jj = 0
+
 IMAGE_SIZE = 512
 RESIZE_FACTOR = 1
 
 # Occluded pixel thr
-VISIBILITY_THR_LOWER = 0.0001 # 0.05% of the img_size
+VISIBILITY_THR_LOWER = 0.001 # 0.05% of the img_size
 VISIBILITY_THR_UPPER = 0.3 # 30% of the img_size
 
 # Fog visibility thr
@@ -132,7 +134,6 @@ class Fish_File(object):
 			self.frame = self.frame - 1
 
 	def convert_to_opencv(self):
-		
 		cam_info = utils.get_cam_info(self.data.cam_transform)
 
 		corners = utils.get_3d_corner(self.data.ann_3d)
@@ -187,7 +188,7 @@ class Fish_File(object):
 			fish.alphay = cam_dist_rot['l_theta_y']
 
 			fish.alpha = utils.get_alpha(fish.x,fish.z,0,0)
-
+			
 			# remove fish
 			if fish.z < Z_THR_LOWER:
 				continue
@@ -201,6 +202,7 @@ class Fish_File(object):
 				continue
 				
 			fish.obj_transform()
+			# print(fish.to_dict())
 			self.fish.append(fish)
 
 		# sort the fish based on id

@@ -10,6 +10,8 @@ import numpy as np
 import math
 from scipy.spatial.transform import Rotation as R
 
+jj = 0
+
 def get_3d_corner(df):
 	df = df[df.columns[7:31]]
 
@@ -49,20 +51,22 @@ def get_cam_info(df):
 	return res
 
 def convert_to_cam_coord(data,cam_info):
+
 	# translate with cam position
 	data[0] = data[0] - cam_info['x']
 	data[1] = data[1] - cam_info['y']
 	data[2] = data[2] - cam_info['z']
 
 	# rotate CCW
+	# print(cam_info['rx'])
 	rx = -cam_info['rx']
 	ry = -cam_info['ry']
 	rz = -cam_info['rz']
 
-	r = R.from_euler('xyz', [rx, ry, rz], degrees=True).as_matrix()
-
+	r = R.from_euler('zxy', [rz, rx, ry], degrees=True).as_matrix()
+	# r = R.from_euler('xyz', [rx, ry, rz], degrees=True).as_matrix()
+	
 	data = np.dot(r,data)
-
 	return data
 
 def convert_to_opencv_coord(data):
