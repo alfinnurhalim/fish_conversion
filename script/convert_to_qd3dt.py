@@ -21,13 +21,13 @@ from lib.dataset.ModKITTI_Dataset import KITTI_Dataset
 
 #=================================================CONFIGURATIONS==============================================================
 # root dir 
-DATASET_DIR = '../synthetic_dataset/20220716_qd3dt_512_red'
+DATASET_DIR = '../synthetic_dataset/20220714_qd3dt_512_sparse'
 
-DATASET_NAME = '20220716_qd3dt_512_red'
+DATASET_NAME = '20220922_centernet_512_strict'
 # os.path.basename(DATASET_DIR)
 
 # number of data will be used
-DATA_NUM = 9999999999
+DATA_NUM = 999999999
 
 #=============================================LOAD FROM UNITY=============================================================
 

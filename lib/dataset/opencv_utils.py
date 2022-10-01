@@ -82,8 +82,9 @@ def convert_to_opencv_coord(data):
 
 	return data
 
-def get_2d_box(data,h,w):
+def get_2d_box(data,img_h,img_w):
 
+	corner_thr = 0.5
 	data=data.values[1:]
 
 	x = []
@@ -93,7 +94,7 @@ def get_2d_box(data,h,w):
 		if i%2==0:
 			x.append(data[i])
 		else:
-			y.append(h - data[i])
+			y.append(img_h - data[i])
 
 	xmin = int(min(x))
 	xmax = int(max(x))
@@ -101,21 +102,40 @@ def get_2d_box(data,h,w):
 	ymin = int(min(y))
 	ymax = int(max(y))
 
-	if (xmin <0 and xmax >w) and (ymin < 0 and ymax > h):
-		return None
+	h = abs(ymax - ymin)
+	l = abs(xmax - xmin)
 
-	# to remove all fish that's in the corner
-	if (xmin <0 or xmax >w) or (ymin < 0 or ymax > h):
-		return None
+	if xmin <0 :
+		if abs(xmin) > l*corner_thr:
+			return None
+
+	if xmax > img_w :
+		if abs(img_w-xmax) > l*corner_thr:
+			return None
+
+	if ymin <0 :
+		if abs(ymin) > h*corner_thr:
+			return None
+
+	if ymax > img_h :
+		if abs(img_h-xmax) > h*corner_thr:
+			return None
+
+	# if (xmin <0 and xmax >img_w) and (ymin < 0 and ymax > img_h):
+	# 	return None
+
+	# # to remove all fish that's in the corner
+	# if (xmin <0 or xmax >img_w) or (ymin < 0 or ymax > img_h):
+	# 	return None
 
 	if xmin < 0:
 		xmin = 0
 	if ymin < 0:
 		ymin = 0
-	if xmax > w:
-		xmax = w
-	if ymax > h:
-		ymax = h
+	if xmax > img_w:
+		xmax = img_w
+	if ymax > img_h:
+		ymax = img_h
 	
 	return xmin,ymin,xmax,ymax
 

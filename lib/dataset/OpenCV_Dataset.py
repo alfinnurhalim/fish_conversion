@@ -21,7 +21,7 @@ import lib.dataset.opencv_utils as utils
 
 jj = 0
 
-IMAGE_SIZE = 512
+IMAGE_SIZE = (512,512)
 RESIZE_FACTOR = 1
 
 # Occluded pixel thr
@@ -33,11 +33,11 @@ FOG_VIS_THR = 0.001
 
 # Depth thr
 Z_THR_LOWER = 0.2 
-Z_THR_UPPER = 4
+Z_THR_UPPER = 10
 
 # Box Area thr
-BBOX_2D_AREA_THR_LOWER = IMAGE_SIZE*0.05
-BBOX_2D_AREA_THR_UPPER = IMAGE_SIZE*0.8
+BBOX_2D_AREA_THR_LOWER = IMAGE_SIZE[0]*0.05
+BBOX_2D_AREA_THR_UPPER = IMAGE_SIZE[0]*0.8
 
 class OpenCV_Dataset(object):
 	def __init__(self,image_size=256,resize_factor=4):
@@ -161,7 +161,7 @@ class Fish_File(object):
 			bbox = utils.get_2d_box(ann_2d,h,w)
 
 			# remove fish
-			if bbox == None or self.frame == 0:
+			if bbox == None :##or self.frame == 0:
 				continue
 
 			xmin,ymin,xmax,ymax = bbox
@@ -190,6 +190,10 @@ class Fish_File(object):
 			fish.alpha = utils.get_alpha(fish.x,fish.z,0,0)
 			
 			# remove fish
+			# if fish.ry%360 < 45 or fish.ry%(360)>135:
+			# 	continue
+			# if fish.rx%360 < 270 and fish.rx%(360)>90:
+			# 	continue
 			if fish.z < Z_THR_LOWER:
 				continue
 			if fish.z > Z_THR_UPPER	:
@@ -222,7 +226,7 @@ class Fish_File(object):
 		return file_dict
 
 	def _image_transform(self,img):
-		img = cv2.resize(img,(int(IMAGE_SIZE*RESIZE_FACTOR),int(IMAGE_SIZE*RESIZE_FACTOR)))
+		img = cv2.resize(img,(int(IMAGE_SIZE[0]*RESIZE_FACTOR),int(IMAGE_SIZE[1]*RESIZE_FACTOR)))
 		return img
 
 	def save_image(self):
@@ -261,7 +265,7 @@ class OpenCV_Camera(object):
 		self.focal_length = data.cam_info['pixelLength']*RESIZE_FACTOR #image resized to 1024
 
 		# h,w,_ = cv2.imread(data.img_path).shape
-		self.set_intrinsic((IMAGE_SIZE*RESIZE_FACTOR),(IMAGE_SIZE*RESIZE_FACTOR))
+		self.set_intrinsic((IMAGE_SIZE[0]*RESIZE_FACTOR),(IMAGE_SIZE[1]*RESIZE_FACTOR))
 		self.set_extrinsic_to_identity()
 		self.set_to_origin()
 
