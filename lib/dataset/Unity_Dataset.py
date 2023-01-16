@@ -52,7 +52,7 @@ class Unity_File(object):
 		self.ann_3d = self.get_ann_3d(filename)
 
 		self.cam_transform = self.get_cam_transform(filename)
-		self.visibility = self.get_visibility(filename)
+		# self.visibility = self.get_visibility(filename)
 		self.cam_info = self.get_cam_info(filename)
 		self.cam_dist_rot = self.get_cam_dist_rot(filename)
 
@@ -65,7 +65,7 @@ class Unity_File(object):
 		try:
 			data = pd.read_csv(path) if os.path.exists(path) else None
 		except:
-			data = pd.DataFrame(columns=['id','p0_x','p0_y','p1_x','p1_y','p2_x','p2_y','p3_x','p3_y'	])
+			data = pd.DataFrame(columns=['id','p0_x','p0_y','p1_x','p1_y','p2_x','p2_y','p3_x','p3_y'])
 		return data
 
 	def get_ann_3d(self,filename):
@@ -86,6 +86,7 @@ class Unity_File(object):
 		except:
 			data = pd.DataFrame(columns=column_names)
 
+		# print(data.iloc[0]['Length']*data.iloc[0]['Width']*data.iloc[0]['Height']*1000)
 		return data
 
 	def get_cam_transform(self,filename):

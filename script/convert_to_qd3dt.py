@@ -21,77 +21,39 @@ from lib.dataset.ModKITTI_Dataset import KITTI_Dataset
 
 #=================================================CONFIGURATIONS==============================================================
 # root dir 
-DATASET_DIR = '../synthetic_dataset/20220714_qd3dt_512_sparse'
-
-DATASET_NAME = '20220922_centernet_512_strict'
+DATASET_NAME = ['BIG_RED_SIDE_10','BIG_RED_SIDE_40','BIG_RED_SIDE_70']
+DATASET_DIR = '../synthetic_dataset/BIG_DATASET/RED/'
 # os.path.basename(DATASET_DIR)
 
 # number of data will be used
-DATA_NUM = 999999999
+DATA_NUM = 9999999999
 
+for name in DATASET_NAME:
+	print(name)
+	dataset_path = os.path.join(DATASET_DIR,name)
 #=============================================LOAD FROM UNITY=============================================================
 
-unity_dataset = load_unity_dataset(dataset_dir = DATASET_DIR,data_num = DATA_NUM)
+	unity_dataset = load_unity_dataset(dataset_dir = dataset_path,data_num = DATA_NUM)
 
 #=============================================CONVERT TO OPENCV=============================================================
-fm = OpenCV_folder_manager(data_dir=DATASET_DIR,name=DATASET_NAME)
-fm.create_folder()
+	fm = OpenCV_folder_manager(data_dir=dataset_path,name=name)
+	fm.create_folder()
 
-opencv_dataset = OpenCV_Dataset()
-opencv_dataset.load_from_unity(unity_dataset,fm)
-opencv_dataset.save_image()
-# opencv_dataset.save_to_json()
-# opencv_dataset.save_to_pkl()
-
-
-#=============================================CONVERT TO COCO Tracking =============================================================
-# tag = 'tracking'
-# fm = COCO_folder_manager(data_dir=DATASET_DIR,name=DATASET_NAME)
-# fm.create_folder()
-
-# coco_dataset = COCO_Dataset()
-# coco_dataset.load_from_opencv(opencv_dataset,fm)
-
-# print('saving to COCO Tracking dataset ....')
-# coco_dataset.save_to_json(filename='tracking_test.json',output=False)
-# coco_dataset.save_to_pkl()
-# coco_dataset.save_image()
-
-# #=============================================CONVERT TO COCO Detection =============================================================
-# tag='detection'
-# fm = COCO_folder_manager(data_dir=DATASET_DIR,name=DATASET_NAME,tag='detection')
-# fm.create_folder()
-
-# coco_dataset = COCO_Dataset()
-# coco_dataset.load_from_opencv(opencv_dataset,fm)
-
-# print('saving to COCO Detection dataset ....')
-# coco_dataset.save_to_json(tag)
-# coco_dataset.save_to_pkl()
-# coco_dataset.save_image()
+	opencv_dataset = OpenCV_Dataset()
+	opencv_dataset.load_from_unity(unity_dataset,fm)
+	opencv_dataset.save_image()
+	# opencv_dataset.save_to_json()
+	# opencv_dataset.save_to_pkl()
 
 #=============================================CONVERT TO KITTI detection =============================================================
-tag = 'detection'
-fm = KITTI_folder_manager(data_dir=DATASET_DIR,name=DATASET_NAME,tag=tag,split='training')
-fm.create_folder()
+	tag = 'detection'
+	fm = KITTI_folder_manager(data_dir=dataset_path,name=name,tag=tag,split='training')
+	fm.create_folder()
 
-kitti_dataset = KITTI_Dataset()
-kitti_dataset.load_from_opencv(opencv_dataset,fm)
+	kitti_dataset = KITTI_Dataset()
+	kitti_dataset.load_from_opencv(opencv_dataset,fm)
 
-kitti_dataset.save_image(tag=tag)
-kitti_dataset.save_camera(tag=tag)
-kitti_dataset.save_ann(tag=tag)
-print('Dataset Converted Successfully')
-
-#=============================================CONVERT TO KITTI Tracking =============================================================
-# tag = 'tracking'
-# fm = KITTI_folder_manager(data_dir=DATASET_DIR,name=DATASET_NAME,tag=tag,split='training')
-# fm.create_folder()
-
-# kitti_dataset = KITTI_Dataset()
-# kitti_dataset.load_from_opencv(opencv_dataset,fm)
-
-# kitti_dataset.save_image(tag=tag)
-# kitti_dataset.save_camera(tag=tag)
-# kitti_dataset.save_ann(tag=tag)
-# print('Dataset Converted Successfully')
+	kitti_dataset.save_image(tag=tag)
+	kitti_dataset.save_camera(tag=tag)
+	kitti_dataset.save_ann(tag=tag)
+	print('Dataset Converted Successfully')

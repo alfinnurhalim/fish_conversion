@@ -19,14 +19,13 @@ from tqdm import tqdm
 
 import lib.dataset.opencv_utils as utils 
 
-jj = 0
-
 IMAGE_SIZE = (512,512)
-RESIZE_FACTOR = 1
+TARGET_SIZE = 512
+RESIZE_FACTOR = TARGET_SIZE/IMAGE_SIZE[0] # 0.375*1024/IMAGE_SIZE[0]
 
 # Occluded pixel thr
-VISIBILITY_THR_LOWER = 0.001 # 0.05% of the img_size
-VISIBILITY_THR_UPPER = 0.3 # 30% of the img_size
+VISIBILITY_THR_LOWER = 0.05**2 # 0.05% of the img_size
+VISIBILITY_THR_UPPER = 0.8**2 # 30% of the img_size
 
 # Fog visibility thr
 FOG_VIS_THR = 0.001
@@ -36,8 +35,8 @@ Z_THR_LOWER = 0.2
 Z_THR_UPPER = 10
 
 # Box Area thr
-BBOX_2D_AREA_THR_LOWER = IMAGE_SIZE[0]*0.05
-BBOX_2D_AREA_THR_UPPER = IMAGE_SIZE[0]*0.8
+BBOX_2D_AREA_THR_LOWER = TARGET_SIZE*TARGET_SIZE*0.00000001
+BBOX_2D_AREA_THR_UPPER = TARGET_SIZE*TARGET_SIZE*0.7
 
 class OpenCV_Dataset(object):
 	def __init__(self,image_size=256,resize_factor=4):
@@ -141,17 +140,20 @@ class Fish_File(object):
 		corners = [utils.convert_to_opencv_coord(corner) for corner in corners]
 
 		for i in range(len(corners)):
-			obj_id = self.data.ann_2d['id'].iloc[i]
+			try:
+				obj_id = self.data.ann_2d['id'].iloc[i]
+			except:
+				continue
 			
 			ann_2d = self.data.ann_2d
 			ann_3d = self.data.ann_3d
-			visibility = self.data.visibility
+			# visibility = self.data.visibility
 			cam_dist_rot = self.data.cam_dist_rot
 
 			ann_2d = ann_2d.loc[ann_2d['id'] == obj_id].iloc[0]
 			ann_3d = ann_3d.loc[ann_3d['id'] == obj_id].iloc[0]
 			cam_dist_rot = cam_dist_rot.loc[cam_dist_rot['id'] == obj_id].iloc[0]
-			visibility = visibility.loc[visibility['id'] == obj_id].iloc[0]
+			# visibility = visibility.loc[visibility['id'] == obj_id].iloc[0]
 
 			corner = corners[i]
 			fish = OpenCV_Object()
@@ -161,16 +163,17 @@ class Fish_File(object):
 			bbox = utils.get_2d_box(ann_2d,h,w)
 
 			# remove fish
-			if bbox == None :##or self.frame == 0:
-				continue
+			# if bbox == None :##or self.frame == 0:
+			# 	continue
 
 			xmin,ymin,xmax,ymax = bbox
-			bbox_area = np.sqrt(abs(xmax-xmin)*abs(ymax-ymin))
+
+			bbox_area = abs(xmax-xmin)*abs(ymax-ymin)
 			# print(bbox_area)
 
 			# remove fish
-			if bbox_area < BBOX_2D_AREA_THR_LOWER:
-				continue
+			# if bbox_area < BBOX_2D_AREA_THR_LOWER:
+			# 	continue
 			if bbox_area > BBOX_2D_AREA_THR_UPPER:
 				continue
 
@@ -189,21 +192,33 @@ class Fish_File(object):
 
 			fish.alpha = utils.get_alpha(fish.x,fish.z,0,0)
 			
+			center = utils.project_3d(self.camera.intrinsic,np.array([fish.x,fish.y,fish.z]))[0]
+			fish.cx = center[0]
+			fish.cy = center[1]
+
+			if fish.cx<=0 or fish.cx>=w:
+				fish.cx = xmin+(xmax-xmin)/2
+
+			if fish.cy<=0 or fish.cy>=h:
+				fish.cy = ymin+(ymax-ymin)/2
+				# print(fish.cx)
+			# print(abs(fish.cx-(xmin+(xmax-xmin)/2)),abs(fish.cy-(ymin+(ymax-ymin)/2)))
+
 			# remove fish
 			# if fish.ry%360 < 45 or fish.ry%(360)>135:
 			# 	continue
 			# if fish.rx%360 < 270 and fish.rx%(360)>90:
 			# 	continue
-			if fish.z < Z_THR_LOWER:
-				continue
-			if fish.z > Z_THR_UPPER	:
-				continue
-			if visibility['pct_screen_covered'] < VISIBILITY_THR_LOWER:
-				continue
-			if visibility['pct_screen_covered'] > VISIBILITY_THR_UPPER:
-				continue
-			if visibility['visibility_estimate'] < FOG_VIS_THR:
-				continue
+			# if fish.z < Z_THR_LOWER:
+			# 	continue
+			# if fish.z > Z_THR_UPPER	:
+			# 	continue
+			# if visibility['pct_screen_covered'] < VISIBILITY_THR_LOWER:
+			# 	continue
+			# if visibility['pct_screen_covered'] > VISIBILITY_THR_UPPER:
+			# 	continue
+			# if visibility['visibility_estimate'] < FOG_VIS_THR:
+			# 	continue
 				
 			fish.obj_transform()
 			# print(fish.to_dict())
@@ -350,11 +365,18 @@ class OpenCV_Object(object):
 		self.alphax = None
 		self.alphay = None
 
+		# center
+		self.cx = None
+		self.cy = None
+
 	def obj_transform(self):
 		self.xmin = self.xmin*RESIZE_FACTOR
 		self.ymin = self.ymin*RESIZE_FACTOR
 		self.xmax = self.xmax*RESIZE_FACTOR
 		self.ymax = self.ymax*RESIZE_FACTOR
+
+		self.cx = self.cx*RESIZE_FACTOR
+		self.cy = self.cy*RESIZE_FACTOR
 
 	def to_dict(self):
 		fish = {

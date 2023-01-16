@@ -20,7 +20,10 @@ import math
 import pandas as pd 
 import lib.dataloader.utils as utils
 
+from lib.dataset.opencv_utils import iou 
 from tqdm import tqdm
+
+IOU_TRESH = 0.9
 
 class KITTI_Dataset(object):
 	def __init__(self):
@@ -38,6 +41,7 @@ class KITTI_Dataset(object):
 			kitti_file = KITTI_File()
 			kitti_file.load_from_fish_file(fish_file,self.fm)
 			self.kitti_files.append(kitti_file)
+			# print(len(kitti_file.KITTI_Objects))
 
 		self.cycle_list = set([x.cycle for x in self.kitti_files])
 
@@ -117,7 +121,25 @@ class KITTI_File(object):
 		self.img_path = os.path.join(self.fm.img_dir,img_filename)
 
 		self.convert_to_KITTI()
+		# before = len(self.KITTI_Objects)
+		self._iou_filter()
+		# print('process',before,len(self.KITTI_Objects))
 		# self.KITTI_Objects = self.KITTI_Objects[5:10]
+
+	def _iou_filter(self):
+		new_list = list()
+		for i,objA in enumerate((self.KITTI_Objects)):
+			add = True
+			for j,objB in enumerate((self.KITTI_Objects)):
+				boxA = [objA.xmin,objA.ymin,objA.xmax,objA.ymax]
+				boxB = [objB.xmin,objB.ymin,objB.xmax,objB.ymax]
+
+				if iou(boxA,boxB)>IOU_TRESH and i != j:
+					add = False
+					break
+			if add :
+				new_list.append(objA)
+		self.KITTI_Objects = new_list
 
 	def convert_to_KITTI(self):
 		for i,fish in enumerate(self.data.fish):
@@ -214,6 +236,10 @@ class KITTI_Object(object):
 		self.ry = None
 		self.rz = None
 
+		# center
+		self.cx = None
+		self.cy = None
+
 	def load_from_fish_object(self,data):
 		self.id = data.id
 
@@ -232,15 +258,19 @@ class KITTI_Object(object):
 		self.l = data.l  
 
 		self.x = data.x
-		self.y = data.y
+		self.y = data.y 
 		self.z = data.z 
 
 		self.rx = math.radians(int(data.rx) * -1)
 		self.ry = math.radians(int(data.ry))
 		self.rz = math.radians(int(data.rz) * -1)
 
+		self.cx = data.cx
+		self.cy = data.cy
+
 	def to_list(self,tag='detection',frame=0):
 		if tag == 'tracking':
 			return [frame,self.id,self.type,self.truncated,self.occluded,self.alphax,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.rx,self.ry,self.rz,self.alphay]
 		else:
-			return [self.type,self.truncated,self.occluded,self.alphax,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.rx,self.ry,self.rz,self.alphay]
+			# return [self.type,self.truncated,self.occluded,self.alphax,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.ry]
+			return [self.type,self.truncated,self.occluded,self.alphax,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.rx,self.ry,self.rz,self.alphay,self.cx,self.cy]

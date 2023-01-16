@@ -10,10 +10,52 @@ import numpy as np
 import math
 from scipy.spatial.transform import Rotation as R
 
-jj = 0
+def iou(bboxA, bboxB):
+	"""
+	Similar to the above function, this one computes the intersection over union
+	between two 2-d boxes. The difference with this function is that it accepts
+	bounding boxes in the form [xmin, ymin, XMAX, YMAX].
+	Attributes:
+	    bboxA (list): defined by 4 values: [xmin, ymin, XMAX, YMAX].
+	    bboxB (list): defined by 4 values: [xmin, ymin, XMAX, YMAX].
+	Returns:
+	    IOU (float): a value between 0-1 representing how much these boxes overlap.
+	"""
+	xminA, yminA, xmaxA, ymaxA = bboxA
+	widthA = xmaxA - xminA
+	heightA = ymaxA - yminA
+	areaA = widthA * heightA
+
+	xminB, yminB, xmaxB, ymaxB = bboxB
+	widthB = xmaxB - xminB
+	heightB = ymaxB - yminB
+	areaB = widthB * heightB
+
+	xA = max(xminA, xminB)
+	yA = max(yminA, yminB)
+	xB = min(xmaxA, xmaxB)
+	yB = min(ymaxA, ymaxB)
+
+	W = xB - xA
+	H = yB - yA 
+
+	if min(W, H) < 0:
+		return 0
+
+	intersect = W * H
+	union = areaA + areaB - intersect
+
+	if union == 0:
+		return 1
+
+	iou = areaB / union
+
+	return iou
 
 def get_3d_corner(df):
+	# print(df.columns)
 	df = df[df.columns[7:31]]
+
 
 	res = []
 	for idx in range(len(df)):
@@ -57,6 +99,7 @@ def convert_to_cam_coord(data,cam_info):
 	data[1] = data[1] - cam_info['y']
 	data[2] = data[2] - cam_info['z']
 
+	# print(cam_info['x'])
 	# rotate CCW
 	# print(cam_info['rx'])
 	rx = -cam_info['rx']
@@ -84,7 +127,7 @@ def convert_to_opencv_coord(data):
 
 def get_2d_box(data,img_h,img_w):
 
-	corner_thr = 0.5
+	corner_thr = 0.8
 	data=data.values[1:]
 
 	x = []
@@ -105,21 +148,21 @@ def get_2d_box(data,img_h,img_w):
 	h = abs(ymax - ymin)
 	l = abs(xmax - xmin)
 
-	if xmin <0 :
-		if abs(xmin) > l*corner_thr:
-			return None
+	# if xmin <0 :
+	# 	if abs(xmin) > l*corner_thr:
+	# 		return None
 
-	if xmax > img_w :
-		if abs(img_w-xmax) > l*corner_thr:
-			return None
+	# if xmax > img_w :
+	# 	if abs(img_w-xmax) > l*corner_thr:
+	# 		return None
 
-	if ymin <0 :
-		if abs(ymin) > h*corner_thr:
-			return None
+	# if ymin <0 :
+	# 	if abs(ymin) > h*corner_thr:
+	# 		return None
 
-	if ymax > img_h :
-		if abs(img_h-xmax) > h*corner_thr:
-			return None
+	# if ymax > img_h :
+	# 	if abs(img_h-xmax) > h*corner_thr:
+	# 		return None
 
 	# if (xmin <0 and xmax >img_w) and (ymin < 0 and ymax > img_h):
 	# 	return None
@@ -187,3 +230,14 @@ def get_yaw(ry,cam_ry):
 	yaw = math.radians(yaw)
 
 	return yaw
+
+def project_3d(proj,points):
+	if len(points.shape)==1:
+		points = np.expand_dims(points, axis=1)
+	P = np.zeros((3,4))
+	P[:,:-1] = proj
+	conn = np.concatenate((points.T, np.ones((points.shape[1], 1))), axis=1)
+	corners_img_before = np.matmul(conn, P.T)
+	corners_img = corners_img_before[:, :2] / corners_img_before[:, 2][:, None]
+
+	return corners_img
