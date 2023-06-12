@@ -21,19 +21,21 @@ from lib.dataset.ModKITTI_Dataset import KITTI_Dataset
 
 #=================================================CONFIGURATIONS==============================================================
 # root dir 
-DATASET_NAME = ['BIG_RED_SIDE_10','BIG_RED_SIDE_40','BIG_RED_SIDE_70']
-DATASET_DIR = '../synthetic_dataset/BIG_DATASET/RED/'
+DATASET_NAME = ['cam11']
+DATASET_DIR = '../synthetic_dataset/red_orbitting/3cams_orbitting'
+# DATASET_DIR = '/media/alfin/Data_ext/dataset/REID_BIG_DATASET_2023/'
 # os.path.basename(DATASET_DIR)
 
 # number of data will be used
-DATA_NUM = 9999999999
+DATA_NUM = 300
 
+FPS = 1
 for name in DATASET_NAME:
 	print(name)
 	dataset_path = os.path.join(DATASET_DIR,name)
 #=============================================LOAD FROM UNITY=============================================================
 
-	unity_dataset = load_unity_dataset(dataset_dir = dataset_path,data_num = DATA_NUM)
+	unity_dataset = load_unity_dataset(dataset_dir = dataset_path,data_num = DATA_NUM, fps = FPS)
 
 #=============================================CONVERT TO OPENCV=============================================================
 	fm = OpenCV_folder_manager(data_dir=dataset_path,name=name)

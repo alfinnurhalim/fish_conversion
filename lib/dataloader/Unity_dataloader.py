@@ -10,7 +10,7 @@
 
 from lib.dataset.Unity_Dataset import Unity_Dataset
 
-def load_unity_dataset(dataset_dir,data_num=None):
-	Dataset = Unity_Dataset(dataset_dir,data_num)
+def load_unity_dataset(dataset_dir,data_num=None,fps=1):
+	Dataset = Unity_Dataset(dataset_dir,data_num,fps)
 
 	return Dataset

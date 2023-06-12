@@ -23,7 +23,7 @@ import lib.dataloader.utils as utils
 from lib.dataset.opencv_utils import iou 
 from tqdm import tqdm
 
-IOU_TRESH = 0.9
+IOU_TRESH = 0.95
 
 class KITTI_Dataset(object):
 	def __init__(self):
@@ -245,8 +245,8 @@ class KITTI_Object(object):
 
 		self.type = 'Car'
 
-		self.alphax = math.radians(int(data.alphax))
-		self.alphay = math.radians(int(data.alphay))
+		self.alphax = data.alphax
+		self.alphay = data.alphay
 
 		self.xmin = data.xmin
 		self.ymin = data.ymin
@@ -261,9 +261,9 @@ class KITTI_Object(object):
 		self.y = data.y 
 		self.z = data.z 
 
-		self.rx = math.radians(int(data.rx) * -1)
-		self.ry = math.radians(int(data.ry))
-		self.rz = math.radians(int(data.rz) * -1)
+		self.rx = data.rx
+		self.ry = data.ry
+		self.rz = data.rz
 
 		self.cx = data.cx
 		self.cy = data.cy
@@ -273,4 +273,4 @@ class KITTI_Object(object):
 			return [frame,self.id,self.type,self.truncated,self.occluded,self.alphax,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.rx,self.ry,self.rz,self.alphay]
 		else:
 			# return [self.type,self.truncated,self.occluded,self.alphax,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.ry]
-			return [self.type,self.truncated,self.occluded,self.alphax,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.rx,self.ry,self.rz,self.alphay,self.cx,self.cy]
+			return [self.type,self.truncated,self.occluded,self.alphax,self.xmin,self.ymin,self.xmax,self.ymax,self.h,self.w,self.l,self.x,self.y,self.z,self.rx,self.ry,self.rz,self.alphay,self.cx,self.cy,self.id]

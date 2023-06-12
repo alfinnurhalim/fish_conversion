@@ -20,8 +20,12 @@ from tqdm import tqdm
 import lib.dataset.opencv_utils as utils 
 
 IMAGE_SIZE = (512,512)
+
+img_w = IMAGE_SIZE[0]
+img_h = IMAGE_SIZE[1]
+
 TARGET_SIZE = 512
-RESIZE_FACTOR = TARGET_SIZE/IMAGE_SIZE[0] # 0.375*1024/IMAGE_SIZE[0]
+RESIZE_FACTOR = 1 # TARGET_SIZE/IMAGE_SIZE[0] # 0.375*1024/IMAGE_SIZE[0]
 
 # Occluded pixel thr
 VISIBILITY_THR_LOWER = 0.05**2 # 0.05% of the img_size
@@ -31,12 +35,12 @@ VISIBILITY_THR_UPPER = 0.8**2 # 30% of the img_size
 FOG_VIS_THR = 0.001
 
 # Depth thr
-Z_THR_LOWER = 0.2 
+Z_THR_LOWER = 0.1
 Z_THR_UPPER = 10
 
 # Box Area thr
-BBOX_2D_AREA_THR_LOWER = TARGET_SIZE*TARGET_SIZE*0.00000001
-BBOX_2D_AREA_THR_UPPER = TARGET_SIZE*TARGET_SIZE*0.7
+BBOX_2D_AREA_THR_LOWER = img_w*img_h*0.01*0.1
+BBOX_2D_AREA_THR_UPPER = img_w*img_h*0.5
 
 class OpenCV_Dataset(object):
 	def __init__(self,image_size=256,resize_factor=4):
@@ -147,11 +151,13 @@ class Fish_File(object):
 			
 			ann_2d = self.data.ann_2d
 			ann_3d = self.data.ann_3d
-			# visibility = self.data.visibility
+			ann_center = self.data.ann_center
+			visibility = self.data.visibility
 			cam_dist_rot = self.data.cam_dist_rot
 
 			ann_2d = ann_2d.loc[ann_2d['id'] == obj_id].iloc[0]
 			ann_3d = ann_3d.loc[ann_3d['id'] == obj_id].iloc[0]
+			ann_center = ann_center[ann_center['id'] == obj_id].iloc[0]
 			cam_dist_rot = cam_dist_rot.loc[cam_dist_rot['id'] == obj_id].iloc[0]
 			# visibility = visibility.loc[visibility['id'] == obj_id].iloc[0]
 
@@ -160,11 +166,12 @@ class Fish_File(object):
 			fish.id = int(re.findall('\d+$',ann_2d['id'])[0])
 
 			h,w,_ = cv2.imread(self.data.img_path).shape
-			bbox = utils.get_2d_box(ann_2d,h,w)
+
+			bbox = utils.get_2d_box(ann_2d,h,w,ann_center)
 
 			# remove fish
-			# if bbox == None :##or self.frame == 0:
-			# 	continue
+			if bbox == None :##or self.frame == 0:
+				continue
 
 			xmin,ymin,xmax,ymax = bbox
 
@@ -174,35 +181,50 @@ class Fish_File(object):
 			# remove fish
 			# if bbox_area < BBOX_2D_AREA_THR_LOWER:
 			# 	continue
-			if bbox_area > BBOX_2D_AREA_THR_UPPER:
-				continue
+			# if bbox_area > BBOX_2D_AREA_THR_UPPER:
+			# 	continue
 
 			fish.xmin,fish.ymin,fish.xmax,fish.ymax = bbox
 			fish.x,fish.y,fish.z = utils.get_xyz(corner)
+
+			# center = utils.project_3d(self.camera.intrinsic,np.array([fish.x,fish.y,fish.z]))[0]
+
+			# 2d screen center
+			fish.cx = int(ann_center['screen_center_x'])
+			fish.cy = int(img_h - ann_center['screen_center_y'])
+
+			# Using 2d annotation file center
+			# fish.cx = int(ann_2d['2D_Cx'])
+			# fish.cy = int(img_h - ann_2d['2D_Cy'])
+
+			# print(obj_id,corner[0][0],fish.x,fish.y,fish.z)
+			# bbox based 2d center
+			# fish.cx = xmin+(xmax-xmin)/2
+			# fish.cy = ymin+(ymax-ymin)/2
+
+			# 3d center
+			# fish.cx = center[0]
+			# fish.cy = center[1]
+
+			if fish.cx<=0 or fish.cx>=w or fish.cy<=0 or fish.cy>=h:
+				continue
+
 			fish.h = ann_3d['Height']
 			fish.w = ann_3d['Width']
 			fish.l = ann_3d['Length']
 
-			fish.rx = cam_dist_rot['rel_theta_x']
-			fish.ry = cam_dist_rot['rel_theta_y'] 
-			fish.rz = cam_dist_rot['rel_theta_z'] 
+			fish.rx = math.radians(int(cam_dist_rot['rel_theta_x']) * -1)
+			fish.ry = math.radians(int(cam_dist_rot['rel_theta_y'])) 
+			fish.rz = math.radians(int(cam_dist_rot['rel_theta_z']) * -1)
 
-			fish.alphax = cam_dist_rot['l_theta_x']
-			fish.alphay = cam_dist_rot['l_theta_y']
+			fish.alphax = fish.ry - utils.calc_theta_ray(img_w,fish.cx,self.camera.intrinsic)
+			fish.alphay = fish.rx - utils.calc_theta_ray(img_h,fish.cy,self.camera.intrinsic,is_y=True)
+
+			# print(fish.alphax)
+			# fish.alphax = cam_dist_rot['l_theta_x']
+			# fish.alphay = cam_dist_rot['l_theta_y']
 
 			fish.alpha = utils.get_alpha(fish.x,fish.z,0,0)
-			
-			center = utils.project_3d(self.camera.intrinsic,np.array([fish.x,fish.y,fish.z]))[0]
-			fish.cx = center[0]
-			fish.cy = center[1]
-
-			if fish.cx<=0 or fish.cx>=w:
-				fish.cx = xmin+(xmax-xmin)/2
-
-			if fish.cy<=0 or fish.cy>=h:
-				fish.cy = ymin+(ymax-ymin)/2
-				# print(fish.cx)
-			# print(abs(fish.cx-(xmin+(xmax-xmin)/2)),abs(fish.cy-(ymin+(ymax-ymin)/2)))
 
 			# remove fish
 			# if fish.ry%360 < 45 or fish.ry%(360)>135:
@@ -392,8 +414,8 @@ class OpenCV_Object(object):
 			'z' : self.z,
 
 			'h' : self.h,
-			'w' : self.w,
-			'l' : self.l,
+			'w' : self.l, # L and W swapped, confirmed 27 Apr 2023
+			'l' : self.w,
 
 			'rx' : self.rx,
 			'ry' : self.ry,

@@ -10,6 +10,24 @@ import numpy as np
 import math
 from scipy.spatial.transform import Rotation as R
 
+def calc_theta_ray(width, center, proj_matrix,is_y=False):
+    fovx = 2 * np.arctan(width / (2 * proj_matrix[0][0]))
+    
+
+    center = width - center if is_y else center
+    
+    dx = center - (width / 2)
+
+    mult = 1
+    if dx < 0:
+        mult = -1
+    dx = abs(dx)
+    angle = np.arctan( (2*dx*np.tan(fovx/2)) / width )
+    angle = angle * mult
+
+    angle = fovx/2 - angle
+    return angle
+
 def iou(bboxA, bboxB):
 	"""
 	Similar to the above function, this one computes the intersection over union
@@ -54,8 +72,12 @@ def iou(bboxA, bboxB):
 
 def get_3d_corner(df):
 	# print(df.columns)
-	df = df[df.columns[7:31]]
+	columns = ['p0_world_x','p0_world_y','p0_world_z','p1_world_x','p1_world_y','p1_world_z',
+			'p2_world_x','p2_world_y','p2_world_z','p3_world_x','p3_world_y','p3_world_z',
+			'p4_world_x','p4_world_y','p4_world_z','p5_world_x','p5_world_y','p5_world_z',
+			'p6_world_x','p6_world_y','p6_world_z','p7_world_x','p7_world_y','p7_world_z']
 
+	df = df[columns]
 
 	res = []
 	for idx in range(len(df)):
@@ -125,10 +147,13 @@ def convert_to_opencv_coord(data):
 
 	return data
 
-def get_2d_box(data,img_h,img_w):
-
+def get_2d_box(data,img_h,img_w,ann_center,ratio=0.5):
+	columns = ['p0_x','p0_y','p1_x','p1_y','p2_x','p2_y','p3_x','p3_y']
+	
+	data = data[columns]
 	corner_thr = 0.8
-	data=data.values[1:]
+
+	data=data.values
 
 	x = []
 	y = []
@@ -145,9 +170,16 @@ def get_2d_box(data,img_h,img_w):
 	ymin = int(min(y))
 	ymax = int(max(y))
 
-	h = abs(ymax - ymin)
-	l = abs(xmax - xmin)
+	h = abs(ymax - ymin) * ratio
+	l = abs(xmax - xmin) * ratio
 
+	cx = int(ann_center['screen_center_x'])
+	cy = int(img_h - ann_center['screen_center_y'])
+
+	xmin = int(cx - l/2)
+	xmax = int(cx + l/2)
+	ymin = int(cy - h/2)
+	ymax = int(cy + l/2)
 	# if xmin <0 :
 	# 	if abs(xmin) > l*corner_thr:
 	# 		return None
@@ -164,8 +196,8 @@ def get_2d_box(data,img_h,img_w):
 	# 	if abs(img_h-xmax) > h*corner_thr:
 	# 		return None
 
-	# if (xmin <0 and xmax >img_w) and (ymin < 0 and ymax > img_h):
-	# 	return None
+	if (xmin <0 and xmax >img_w) and (ymin < 0 and ymax > img_h):
+		return None
 
 	# # to remove all fish that's in the corner
 	# if (xmin <0 or xmax >img_w) or (ymin < 0 or ymax > img_h):
