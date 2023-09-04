@@ -106,7 +106,7 @@ class Unity_File(object):
 		return data
 
 	def get_cam_transform(self,filename):
-		path =  os.path.join(self.data_dir,filename[:-6]+'_camera_transform.csv') #10 for camCenter, 5 rest. 16 fo camExtra2
+		path =  os.path.join(self.data_dir,filename[:-5]+'_camera_transform.csv') #10 for camCenter, 5 rest. 16 fo camExtra2
 		try:
 			data = pd.read_csv(path) if os.path.exists(path) else None
 		except:

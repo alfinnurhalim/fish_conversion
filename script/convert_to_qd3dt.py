@@ -21,8 +21,8 @@ from lib.dataset.ModKITTI_Dataset import KITTI_Dataset
 
 #=================================================CONFIGURATIONS==============================================================
 # root dir 
-DATASET_NAME = ['cam11']
-DATASET_DIR = '../synthetic_dataset/red_orbitting/3cams_orbitting'
+DATASET_NAME = ['normal_exp','high_exp']
+DATASET_DIR = '../synthetic_dataset/NEW_RESOLUTION'
 # DATASET_DIR = '/media/alfin/Data_ext/dataset/REID_BIG_DATASET_2023/'
 # os.path.basename(DATASET_DIR)
 

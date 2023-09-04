@@ -19,7 +19,7 @@ from tqdm import tqdm
 
 import lib.dataset.opencv_utils as utils 
 
-IMAGE_SIZE = (512,512)
+IMAGE_SIZE = (640,480)
 
 img_w = IMAGE_SIZE[0]
 img_h = IMAGE_SIZE[1]

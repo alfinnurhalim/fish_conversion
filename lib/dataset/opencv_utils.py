@@ -147,7 +147,8 @@ def convert_to_opencv_coord(data):
 
 	return data
 
-def get_2d_box(data,img_h,img_w,ann_center,ratio=0.5):
+def get_2d_box(data,img_h,img_w,ann_center,ratio=0.8):
+	raw_data = data.copy()
 	columns = ['p0_x','p0_y','p1_x','p1_y','p2_x','p2_y','p3_x','p3_y']
 	
 	data = data[columns]
@@ -176,10 +177,16 @@ def get_2d_box(data,img_h,img_w,ann_center,ratio=0.5):
 	cx = int(ann_center['screen_center_x'])
 	cy = int(img_h - ann_center['screen_center_y'])
 
-	xmin = int(cx - l/2)
-	xmax = int(cx + l/2)
-	ymin = int(cy - h/2)
-	ymax = int(cy + l/2)
+	# h = raw_data['Height']
+	# l = raw_data['Width']
+
+	# cx = raw_data['2D_Cx']
+	# cy = img_h - raw_data['2D_Cy']
+
+	# xmin = int(cx - l/2)
+	# xmax = int(cx + l/2)
+	# ymin = int(cy - h/2)
+	# ymax = int(cy + l/2)
 	# if xmin <0 :
 	# 	if abs(xmin) > l*corner_thr:
 	# 		return None
