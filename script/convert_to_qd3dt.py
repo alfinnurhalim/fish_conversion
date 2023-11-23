@@ -21,13 +21,13 @@ from lib.dataset.ModKITTI_Dataset import KITTI_Dataset
 
 #=================================================CONFIGURATIONS==============================================================
 # root dir 
-DATASET_NAME = ['normal_exp','high_exp']
-DATASET_DIR = '../synthetic_dataset/NEW_RESOLUTION'
+DATASET_NAME = ['range_22nov']
+DATASET_DIR = '../../synthetic_dataset/range_22nov/'
 # DATASET_DIR = '/media/alfin/Data_ext/dataset/REID_BIG_DATASET_2023/'
 # os.path.basename(DATASET_DIR)
 
 # number of data will be used
-DATA_NUM = 300
+DATA_NUM = 999999
 
 FPS = 1
 for name in DATASET_NAME:

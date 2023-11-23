@@ -17,9 +17,10 @@ import math
 from scipy.spatial.transform import Rotation as R
 from tqdm import tqdm
 
-import lib.dataset.opencv_utils as utils 
+import lib.dataset.opencv_utils as utils
+import imgaug.augmenters as iaa
 
-IMAGE_SIZE = (640,480)
+IMAGE_SIZE = (512,512)
 
 img_w = IMAGE_SIZE[0]
 img_h = IMAGE_SIZE[1]
@@ -35,12 +36,16 @@ VISIBILITY_THR_UPPER = 0.8**2 # 30% of the img_size
 FOG_VIS_THR = 0.001
 
 # Depth thr
-Z_THR_LOWER = 0.1
-Z_THR_UPPER = 10
+Z_THR_LOWER = 0.05
+Z_THR_UPPER = 0.8
 
 # Box Area thr
 BBOX_2D_AREA_THR_LOWER = img_w*img_h*0.01*0.1
 BBOX_2D_AREA_THR_UPPER = img_w*img_h*0.5
+
+seq = iaa.Sequential([
+    iaa.Multiply((1.8)),
+])
 
 class OpenCV_Dataset(object):
 	def __init__(self,image_size=256,resize_factor=4):
@@ -143,7 +148,16 @@ class Fish_File(object):
 		corners = [utils.convert_to_cam_coord(corner,cam_info) for corner in corners] 
 		corners = [utils.convert_to_opencv_coord(corner) for corner in corners]
 
+		selected_corners = range(len(corners))
+
+		selected_corners = []
 		for i in range(len(corners)):
+			corner = corners[i]
+			fishx,fishy,fishz = utils.get_xyz(corner)
+			if fishz<Z_THR_UPPER:
+				selected_corners.append(i)
+
+		for i in selected_corners:
 			try:
 				obj_id = self.data.ann_2d['id'].iloc[i]
 			except:
@@ -217,9 +231,31 @@ class Fish_File(object):
 			fish.ry = math.radians(int(cam_dist_rot['rel_theta_y'])) 
 			fish.rz = math.radians(int(cam_dist_rot['rel_theta_z']) * -1)
 
+			# if fish.rx < 0:
+			# 	fish.rx = np.pi*2 - fish.rx
+			# if fish.ry < 0:
+			# 	fish.ry = np.pi*2 - fish.ry
+			# if fish.rz < 0:
+			# 	fish.rz = np.pi*2 - fish.rz
+
+			# if fish.ry > np.radians(180):
+			# 	fish.ry = fish.ry%np.radians(180)
+			# 	fish.rx = -fish.rx
+			# fish.ry = fish.ry%np.radians(180)
+			# fish.rx = (fish.rx+np.radians(90))%np.radians(180)
+
 			fish.alphax = fish.ry - utils.calc_theta_ray(img_w,fish.cx,self.camera.intrinsic)
 			fish.alphay = fish.rx - utils.calc_theta_ray(img_h,fish.cy,self.camera.intrinsic,is_y=True)
 
+			# if fish.alphax < 0:
+			# 	fish.alphax = np.pi*2 - fish.alphax
+			# if fish.alphay < 0:
+			# 	fish.alphay = np.pi*2 - fish.alphay
+
+			
+
+			# fish.rx = fish.rx%(np.pi*2)
+			# fish.ry = fish.ry%(np.pi*2)
 			# print(fish.alphax)
 			# fish.alphax = cam_dist_rot['l_theta_x']
 			# fish.alphay = cam_dist_rot['l_theta_y']
@@ -227,7 +263,18 @@ class Fish_File(object):
 			fish.alpha = utils.get_alpha(fish.x,fish.z,0,0)
 
 			# remove fish
-			# if fish.ry%360 < 45 or fish.ry%(360)>135:
+			# ry = fish.ry%np.radians(180)
+			# rx = (fish.rx+np.radians(90))%np.radians(180)
+
+			# ry = fish.ry
+			# rx = fish.rx
+
+			# angle_range_y = np.radians(45)
+			# angle_range_x = np.radians(45)
+
+			# if ry < np.radians(90)-angle_range_y or ry>np.radians(90)+angle_range_y:
+			# 	continue
+			# if rx < np.radians(90)-angle_range_x or rx>np.radians(90)+angle_range_x:
 			# 	continue
 			# if fish.rx%360 < 270 and fish.rx%(360)>90:
 			# 	continue
@@ -264,6 +311,9 @@ class Fish_File(object):
 
 	def _image_transform(self,img):
 		img = cv2.resize(img,(int(IMAGE_SIZE[0]*RESIZE_FACTOR),int(IMAGE_SIZE[1]*RESIZE_FACTOR)))
+		# img = np.expand_dims(img,axis=0)
+		# img = seq(images=img)
+		# img = img[0]
 		return img
 
 	def save_image(self):
